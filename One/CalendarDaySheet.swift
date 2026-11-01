@@ -30,8 +30,10 @@ struct CalendarDaySheet<Header: View, Content: View>: View {
     /// Height delta vs the current detent. Positive covers content above (FoldersBar);
     /// negative shortens the sheet so that content is revealed.
     var coverExtraHeight: CGFloat = 0
-    /// Overrides the `.full` detent height (never shorter than `.mid`).
-    var expandedHeight: CGFloat? = nil
+    /// Overrides the `.full` detent so the sheet's top edge sits at this Y in
+    /// `expandedTopCoordinateSpace` (never shorter than `.mid`).
+    var expandedTop: CGFloat? = nil
+    var expandedTopCoordinateSpace: String = ""
     @ViewBuilder let header: () -> Header
     @ViewBuilder let content: () -> Content
 
@@ -44,6 +46,8 @@ struct CalendarDaySheet<Header: View, Content: View>: View {
         GeometryReader { geo in
             let totalHeight = geo.size.height
             let midHeight = SheetDetent.mid.height(in: totalHeight)
+            let sheetBottom = geo.frame(in: .named(expandedTopCoordinateSpace)).maxY
+            let expandedHeight = expandedTop.map { sheetBottom - $0 }
             let fullHeight = max(expandedHeight ?? SheetDetent.full.height(in: totalHeight), midHeight)
             let baseHeight = detent == .full ? fullHeight : midHeight
             let currentHeight = min(max(baseHeight - dragOffset, midHeight), fullHeight)

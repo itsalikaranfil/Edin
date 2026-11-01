@@ -156,11 +156,11 @@ struct CalendarView: View {
         withTransaction(transaction, body)
     }
 
-    /// Sheet height that leaves the header, weekday row, and one week row visible.
-    private var weekModeSheetHeight: CGFloat? {
-        guard calendarContainerHeight > 0, calendarGridTop > 0 else { return nil }
+    /// Sheet top (in `calendarContainer`) that leaves the header, weekday row, and one week row visible.
+    private var weekModeSheetTop: CGFloat? {
+        guard calendarGridTop > 0 else { return nil }
         let weekRowGap: CGFloat = 12
-        return calendarContainerHeight - (calendarGridTop + DayCellView.rowHeight + weekRowGap)
+        return calendarGridTop + DayCellView.rowHeight + weekRowGap
     }
 
     /// Day whose week is shown in week mode.
@@ -215,6 +215,8 @@ struct CalendarView: View {
                             )
                         }
                     )
+                    .opacity(showsWeekOnly ? 0 : 1)
+                    .allowsHitTesting(!showsWeekOnly)
 
                     Spacer(minLength: 0)
                 }
@@ -240,7 +242,8 @@ struct CalendarView: View {
                     CalendarDaySheet(
                         detent: sheetDetent,
                         coverExtraHeight: sheetShowsWeekOnly ? 0 : foldersCoverExtraHeight,
-                        expandedHeight: weekModeSheetHeight,
+                        expandedTop: weekModeSheetTop,
+                        expandedTopCoordinateSpace: "calendarContainer",
                         header: {
                             CalendarSheetFilterBar(
                                 sheetFilter: $sheetFilter,
