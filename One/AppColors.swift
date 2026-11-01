@@ -67,12 +67,12 @@ extension Color {
     /// Deeper red for soft glows only.
     static let premiumRedDeep = Color(red: 0.62, green: 0.03, blue: 0.09)
 
-    /// Edin+ premium blue, matching the reference button (#3C7DF5).
-    static let premiumBlue = Color(red: 60 / 255, green: 125 / 255, blue: 245 / 255)
+    /// Edin+ premium dark blue.
+    static let premiumBlue = Color(red: 0.05, green: 0.22, blue: 0.62)
 
-    /// Lighter premium blue for gradients.
-    static let premiumBlueBright = Color(red: 109 / 255, green: 158 / 255, blue: 248 / 255)
+    /// Brighter dark blue for CTAs and Settings cards.
+    static let premiumBlueBright = Color(red: 0.16, green: 0.36, blue: 0.82)
 
     /// Deeper blue for soft glows only.
-    static let premiumBlueDeep = Color(red: 33 / 255, green: 69 / 255, blue: 135 / 255)
+    static let premiumBlueDeep = Color(red: 0.02, green: 0.10, blue: 0.36)
 }
