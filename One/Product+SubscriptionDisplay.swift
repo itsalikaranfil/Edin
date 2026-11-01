@@ -52,6 +52,36 @@ extension Product {
         }
     }
 
+    /// Date the free trial ends (and billing starts) if it begins at `start`.
+    func oneTrialEndDate(from start: Date = Date(), calendar: Calendar = .current) -> Date? {
+        guard let period = oneFreeTrialOffer?.period else { return nil }
+        let component: Calendar.Component
+        switch period.unit {
+        case .day: component = .day
+        case .week: component = .weekOfYear
+        case .month: component = .month
+        case .year: component = .year
+        @unknown default: return nil
+        }
+        return calendar.date(byAdding: component, value: period.value, to: start)
+    }
+
+    /// One-line billing summary for plan pickers; annual shows its monthly equivalent.
+    var oneBillingSummary: String {
+        guard let period = subscription?.subscriptionPeriod else { return onePeriodDescription }
+        switch (period.unit, period.value) {
+        case (.year, 1):
+            let perMonth = (price / 12).formatted(priceFormatStyle)
+            return String(localized: "Just \(perMonth)/month, billed yearly")
+        case (.month, 1):
+            return String(localized: "Billed monthly")
+        case (.week, 1), (.day, 7):
+            return String(localized: "Billed weekly")
+        default:
+            return onePeriodDescription
+        }
+    }
+
     /// Short period unit for compact labels ("week" / "month" / "year").
     var oneShortPeriodLabel: String {
         if let period = subscription?.subscriptionPeriod {
