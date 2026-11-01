@@ -660,14 +660,14 @@ struct ToolbarGlassCancelButton: View {
     }
 }
 
-/// Nav-toolbar save/done — system glassProminent + red tint, light red checkmark.
+/// Nav-toolbar save/done — system glassProminent + blue tint, light blue checkmark.
 struct ToolbarGlassConfirmButton: View {
     var accessibilityLabelText: String = "Save"
     var isEnabled: Bool = true
     var action: () -> Void
 
-    private var checkmarkLightRed: Color {
-        Color(red: 1.0, green: 0.72, blue: 0.72)
+    private var checkmarkLightBlue: Color {
+        Color(red: 0.75, green: 0.90, blue: 1.0)
     }
 
     var body: some View {
@@ -676,10 +676,10 @@ struct ToolbarGlassConfirmButton: View {
             action()
         } label: {
             Image(systemName: "checkmark")
-                .foregroundStyle(checkmarkLightRed)
+                .foregroundStyle(checkmarkLightBlue)
         }
         .buttonStyle(.glassProminent)
-        .tint(Color.flagRed)
+        .tint(Color.eventBlue)
         .disabled(!isEnabled)
         .opacity(isEnabled ? 1 : 0.4)
         .accessibilityLabel(accessibilityLabelText)

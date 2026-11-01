@@ -197,7 +197,7 @@ struct SubscriptionView: View {
                 .scaledToFill()
                 .frame(width: 84, height: 84, alignment: .center)
                 .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                .shadow(color: Color.premiumRed.opacity(0.45), radius: 18, x: 0, y: 8)
+                .shadow(color: Color.premiumBlue.opacity(0.45), radius: 18, x: 0, y: 8)
 
             Text("Edin+")
                 .font(.system(size: 34, weight: .heavy))
@@ -281,7 +281,7 @@ struct SubscriptionView: View {
                             .foregroundColor(.white)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 10)
-                            .background(Color.premiumRed)
+                            .background(Color.premiumBlue)
                             .cornerRadius(10)
                     }
                     .buttonStyle(.plain)
@@ -311,13 +311,13 @@ struct SubscriptionView: View {
                 .padding(.vertical, 18)
                 .background {
                     if canSubscribe {
-                        Capsule().fill(Color.premiumRed)
+                        Capsule().fill(Color.premiumBlue)
                     } else {
                         Capsule().fill(Color.appBackground)
                     }
                 }
                 .shadow(
-                    color: canSubscribe ? Color.premiumRed.opacity(0.35) : .clear,
+                    color: canSubscribe ? Color.premiumBlue.opacity(0.35) : .clear,
                     radius: 14,
                     x: 0,
                     y: 6

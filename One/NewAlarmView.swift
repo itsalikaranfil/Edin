@@ -206,7 +206,7 @@ private struct AlarmWeekdayPickerView: View {
                         if selectedWeekdays.contains(weekday) {
                             Image(systemName: "checkmark")
                                 .fontWeight(.semibold)
-                                .foregroundColor(.red)
+                                .foregroundColor(Color.eventBlue)
                         }
                     }
                     .contentShape(Rectangle())
