@@ -82,8 +82,8 @@ struct SubscriptionView: View {
     
     private var primaryButtonTitle: String {
         if isPurchasing { return String(localized: "Processing...") }
-        if showTrialCTA, let trialDurationText {
-            return String(localized: "Start My \(trialDurationText) Free Trial")
+        if showTrialCTA {
+            return String(localized: "Start My Free Trial")
         }
         if isManaging { return String(localized: "Upgrade") }
         return String(localized: "Get Edin+")
