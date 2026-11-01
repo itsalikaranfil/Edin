@@ -50,7 +50,7 @@ struct CalendarDaySheet<Header: View, Content: View>: View {
             let expandedHeight = expandedTop.map { sheetBottom - $0 }
             let fullHeight = max(expandedHeight ?? SheetDetent.full.height(in: totalHeight), midHeight)
             let baseHeight = detent == .full ? fullHeight : midHeight
-            let currentHeight = min(max(baseHeight - dragOffset, midHeight), fullHeight)
+            let currentHeight = Self.rubberBanded(baseHeight - dragOffset, min: midHeight, max: fullHeight)
             // coverExtraHeight can be negative to drop the sheet below mid (reveal FoldersBar).
             let sheetHeight = min(max(currentHeight + coverExtraHeight, midHeight * 0.45), totalHeight)
 
@@ -58,14 +58,17 @@ struct CalendarDaySheet<Header: View, Content: View>: View {
                 Spacer(minLength: 0)
 
                 VStack(spacing: 0) {
-                    dragHandle
-                        .padding(.top, 10)
-                        .padding(.bottom, 8)
-                        .frame(maxWidth: .infinity)
-                        .contentShape(Rectangle())
-                        .gesture(sheetDragGesture(baseHeight: baseHeight, midHeight: midHeight, fullHeight: fullHeight))
+                    VStack(spacing: 0) {
+                        dragHandle
+                            .padding(.top, 10)
+                            .padding(.bottom, 12)
+                            .frame(maxWidth: .infinity)
 
-                    header()
+                        header()
+                    }
+                    .contentShape(Rectangle())
+                    // Simultaneous so the filter pills in the header stay tappable.
+                    .simultaneousGesture(sheetDragGesture(baseHeight: baseHeight, midHeight: midHeight, fullHeight: fullHeight))
 
                     content()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -87,27 +90,46 @@ struct CalendarDaySheet<Header: View, Content: View>: View {
     }
 
     private func sheetDragGesture(baseHeight: CGFloat, midHeight: CGFloat, fullHeight: CGFloat) -> some Gesture {
-        DragGesture(minimumDistance: 2)
+        // Global space: the sheet resizes under the finger, so local translation would feed back and jitter.
+        DragGesture(minimumDistance: 6, coordinateSpace: .global)
             .onChanged { value in
-                dragOffset = value.translation.height
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) {
+                    dragOffset = value.translation.height
+                }
             }
             .onEnded { value in
-                let projected = baseHeight - value.translation.height - value.predictedEndTranslation.height * 0.35
-                let velocity = value.predictedEndTranslation.height
+                let velocity = value.velocity.height
+                let projected = baseHeight - value.translation.height - velocity * 0.15
+                let target: SheetDetent
+                if velocity > 350 {
+                    target = .mid
+                } else if velocity < -350 {
+                    target = .full
+                } else {
+                    target = projected > (midHeight + fullHeight) / 2 ? .full : .mid
+                }
 
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
-                    if velocity > 40 {
-                        detent = .mid
-                    } else if velocity < -40 {
-                        detent = .full
-                    } else if projected > (midHeight + fullHeight) / 2 {
-                        detent = .full
-                    } else {
-                        detent = .mid
-                    }
+                if target != detent {
+                    Haptics.selection()
+                }
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+                    detent = target
                     dragOffset = 0
                 }
             }
+    }
+
+    /// Lets the sheet stretch a little past its detents with resistance instead of stopping dead.
+    private static func rubberBanded(_ height: CGFloat, min lower: CGFloat, max upper: CGFloat) -> CGFloat {
+        let limit: CGFloat = 50
+        func resist(_ overshoot: CGFloat) -> CGFloat {
+            limit * (1 - 1 / (overshoot / limit * 0.55 + 1))
+        }
+        if height > upper { return upper + resist(height - upper) }
+        if height < lower { return lower - resist(lower - height) }
+        return height
     }
 }
 
