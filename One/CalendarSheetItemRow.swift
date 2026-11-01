@@ -801,7 +801,7 @@ struct CalendarSheetFilterBar: View {
 
 private extension View {
     /// Liquid glass on the flat white light-mode sheet reads as a dark drop shadow,
-    /// so light mode uses a flat fill instead.
+    /// so light mode uses a flat white pill with a hairline border instead.
     func sheetFilterPill(active: Bool = false) -> some View {
         modifier(SheetFilterPillModifier(active: active))
     }
@@ -817,9 +817,12 @@ private struct SheetFilterPillModifier: ViewModifier {
         } else {
             content.background {
                 Capsule()
-                    .fill(Color.pillBackground)
+                    .fill(Color.white)
                     .overlay {
-                        Capsule().fill(Color.primaryText.opacity(active ? 0.1 : 0))
+                        Capsule().strokeBorder(
+                            Color.primaryText.opacity(active ? 0.35 : 0.1),
+                            lineWidth: active ? 1.2 : 1
+                        )
                     }
             }
         }
