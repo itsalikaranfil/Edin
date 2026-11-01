@@ -47,11 +47,11 @@ struct ContentView: View {
         )
     }
 
-    /// Tab bar ignores Label foregroundStyle; use an always-original blue glyph instead.
+    /// Tab bar ignores Label foregroundStyle; use an always-original red glyph instead.
     private var todayTabBackIcon: Image {
         let config = UIImage.SymbolConfiguration(scale: .large)
         let uiImage = UIImage(systemName: "arrow.backward", withConfiguration: config)?
-            .withTintColor(UIColor(Color.eventBlue), renderingMode: .alwaysOriginal)
+            .withTintColor(UIColor(Color.flagRed), renderingMode: .alwaysOriginal)
         return Image(uiImage: uiImage ?? UIImage())
     }
 
@@ -101,7 +101,7 @@ struct ContentView: View {
         .tabViewStyle(.sidebarAdaptable)
         .preferredColorScheme(appAppearance.preferredColorScheme)
         // Selected tab highlight (forms that need neutral accents set .tint(.secondary) locally).
-        .tint(Color.eventBlue)
+        .tint(Color.flagRed)
         .overlay(alignment: .bottomTrailing) {
             // Invisible UIMenu anchor over the plus control — same system liquid glass menu as filter.
             SystemMenuAnchor(

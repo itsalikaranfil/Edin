@@ -9,9 +9,9 @@ import SwiftUI
 import StoreKit
 
 extension LinearGradient {
-    /// Bright premium blue gradient used by the paywall CTA and Settings card.
+    /// Bright premium red gradient used by the paywall CTA and Settings card.
     static let premiumGradient = LinearGradient(
-        colors: [Color.premiumBlueBright, Color.premiumBlue],
+        colors: [Color.premiumRedBright, Color.premiumRed],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
@@ -30,16 +30,16 @@ struct PaywallBadge: View {
         Text(text)
             .font(.system(size: 10, weight: .bold))
             .tracking(0.6)
-            .foregroundColor(style == .filled ? .white : Color.premiumBlue)
+            .foregroundColor(style == .filled ? .white : Color.premiumRed)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background {
                 if style == .filled {
-                    Capsule().fill(Color.premiumBlue)
+                    Capsule().fill(Color.premiumRed)
                 } else {
                     Capsule()
-                        .strokeBorder(Color.premiumBlue.opacity(0.55), lineWidth: 1)
-                        .background(Capsule().fill(Color.premiumBlue.opacity(0.1)))
+                        .strokeBorder(Color.premiumRed.opacity(0.55), lineWidth: 1)
+                        .background(Capsule().fill(Color.premiumRed.opacity(0.1)))
                 }
             }
     }
@@ -54,11 +54,11 @@ struct PaywallFeatureRow: View {
         HStack(alignment: .center, spacing: 14) {
             Image(systemName: icon)
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(Color.premiumBlue)
+                .foregroundColor(Color.premiumRed)
                 .frame(width: 36, height: 36)
                 .background(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.premiumBlue.opacity(0.12))
+                        .fill(Color.premiumRed.opacity(0.12))
                 )
 
             VStack(alignment: .leading, spacing: 2) {
@@ -82,8 +82,8 @@ struct PremiumGlowBackground: View {
             Color.screenBackground
             RadialGradient(
                 colors: [
-                    Color.premiumBlue.opacity(0.28),
-                    Color.premiumBlue.opacity(0.08),
+                    Color.premiumRed.opacity(0.28),
+                    Color.premiumRed.opacity(0.08),
                     Color.clear
                 ],
                 center: .top,
@@ -153,17 +153,17 @@ struct PaywallPlanCard: View {
 
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 22, weight: .regular))
-                    .foregroundColor(isSelected ? Color.premiumBlue : Color.secondary.opacity(0.45))
+                    .foregroundColor(isSelected ? Color.premiumRed : Color.secondary.opacity(0.45))
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(isSelected ? Color.premiumBlue.opacity(0.12) : Color.appBackground)
+                    .fill(isSelected ? Color.premiumRed.opacity(0.12) : Color.appBackground)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(isSelected ? Color.premiumBlue : Color.clear, lineWidth: 2)
+                    .stroke(isSelected ? Color.premiumRed : Color.clear, lineWidth: 2)
             )
         }
         .buttonStyle(.plain)
@@ -243,7 +243,7 @@ struct SettingsPremiumCard: View {
                             Image(systemName: "arrow.right")
                                 .font(.system(size: 13, weight: .bold))
                         }
-                        .foregroundColor(Color.premiumBlue)
+                        .foregroundColor(Color.premiumRed)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
                         .background(Capsule().fill(Color.white))
@@ -290,9 +290,9 @@ struct SettingsPremiumCard: View {
                 .padding(20)
             }
         }
-        .background(Color.premiumBlue)
+        .background(Color.premiumRed)
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .shadow(color: Color.premiumBlue.opacity(0.3), radius: 16, x: 0, y: 8)
+        .shadow(color: Color.premiumRed.opacity(0.3), radius: 16, x: 0, y: 8)
     }
 
     private func glyph(systemName: String) -> some View {
