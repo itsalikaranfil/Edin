@@ -667,7 +667,7 @@ struct ToolbarGlassConfirmButton: View {
     var action: () -> Void
 
     private var checkmarkLightBlue: Color {
-        Color(red: 0.73, green: 0.78, blue: 0.90)
+        Color(red: 0.75, green: 0.90, blue: 1.0)
     }
 
     var body: some View {
@@ -679,7 +679,7 @@ struct ToolbarGlassConfirmButton: View {
                 .foregroundStyle(checkmarkLightBlue)
         }
         .buttonStyle(.glassProminent)
-        .tint(Color.premiumBlue)
+        .tint(Color.eventBlue)
         .disabled(!isEnabled)
         .opacity(isEnabled ? 1 : 0.4)
         .accessibilityLabel(accessibilityLabelText)

@@ -51,7 +51,7 @@ struct ContentView: View {
     private var todayTabBackIcon: Image {
         let config = UIImage.SymbolConfiguration(scale: .large)
         let uiImage = UIImage(systemName: "arrow.backward", withConfiguration: config)?
-            .withTintColor(UIColor(Color.premiumBlue), renderingMode: .alwaysOriginal)
+            .withTintColor(UIColor(Color.eventBlue), renderingMode: .alwaysOriginal)
         return Image(uiImage: uiImage ?? UIImage())
     }
 
@@ -101,7 +101,7 @@ struct ContentView: View {
         .tabViewStyle(.sidebarAdaptable)
         .preferredColorScheme(appAppearance.preferredColorScheme)
         // Selected tab highlight (forms that need neutral accents set .tint(.secondary) locally).
-        .tint(Color.premiumBlue)
+        .tint(Color.eventBlue)
         .overlay(alignment: .bottomTrailing) {
             // Invisible UIMenu anchor over the plus control — same system liquid glass menu as filter.
             SystemMenuAnchor(
