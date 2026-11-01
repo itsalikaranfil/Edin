@@ -49,6 +49,7 @@ struct CalendarView: View {
     /// Sheet dragged up: grid shows only the anchor week. Persists until the user drags the sheet down.
     @AppStorage("calendarWeekMode") private var isWeekMode = false
     @State private var calendarGridTop: CGFloat = 0
+    @State private var monthRevealedForFolders = false
     @State private var foldersSheetDetent: SheetDetent = .mid
     @State private var folderItemsSheetDetent: SheetDetent = .mid
     @State private var showFolders = false
@@ -92,24 +93,67 @@ struct CalendarView: View {
         return targetHeight - midHeight
     }
 
-    /// Showing FoldersBar temporarily brings back the full month; hiding it returns to week mode.
+    /// Grid layout: the full month is laid out while FoldersBar is shown (or still hiding) in week mode.
     private var showsWeekOnly: Bool {
+        isWeekMode && !monthRevealedForFolders
+    }
+
+    /// Sheet position: week height unless FoldersBar is shown.
+    private var sheetShowsWeekOnly: Bool {
         isWeekMode && !showFoldersBar
     }
 
     private var sheetDetent: Binding<SheetDetent> {
         Binding(
-            get: { showsWeekOnly ? .full : .mid },
+            get: { sheetShowsWeekOnly ? .full : .mid },
             set: { newValue in
                 let weekMode = newValue == .full
-                guard weekMode != showsWeekOnly else { return }
+                guard weekMode != sheetShowsWeekOnly else { return }
                 monthSlideDirection = 0
                 isWeekMode = weekMode
                 if weekMode {
                     showFoldersBar = false
+                    collapseMonthAfterSheetSettles()
+                } else {
+                    monthRevealedForFolders = false
                 }
             }
         )
+    }
+
+    /// In week mode the month swaps in/out under the sheet without animation, so FoldersBar never slides;
+    /// only the sheet animates.
+    private func toggleFoldersBar() {
+        let spring = Animation.spring(response: 0.35, dampingFraction: 0.86)
+        guard isWeekMode else {
+            withAnimation(spring) { showFoldersBar.toggle() }
+            return
+        }
+
+        if showFoldersBar {
+            withAnimation(spring) { showFoldersBar = false }
+            collapseMonthAfterSheetSettles()
+        } else {
+            monthSlideDirection = 0
+            withoutAnimation { monthRevealedForFolders = true }
+            // Next run loop, after FoldersBar has been measured at its month position.
+            DispatchQueue.main.async {
+                withAnimation(spring) { showFoldersBar = true }
+            }
+        }
+    }
+
+    private func collapseMonthAfterSheetSettles() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            guard !showFoldersBar else { return }
+            withoutAnimation { monthRevealedForFolders = false }
+        }
+    }
+
+    private func withoutAnimation(_ body: () -> Void) {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction, body)
     }
 
     /// Sheet height that leaves the header, weekday row, and one week row visible.
@@ -195,7 +239,7 @@ struct CalendarView: View {
                 if !showFolders && viewingFolder == nil && !showAlarms {
                     CalendarDaySheet(
                         detent: sheetDetent,
-                        coverExtraHeight: showsWeekOnly ? 0 : foldersCoverExtraHeight,
+                        coverExtraHeight: sheetShowsWeekOnly ? 0 : foldersCoverExtraHeight,
                         expandedHeight: weekModeSheetHeight,
                         header: {
                             CalendarSheetFilterBar(
@@ -370,12 +414,7 @@ struct CalendarView: View {
 
                     Button {
                         Haptics.selection()
-                        if isWeekMode {
-                            monthSlideDirection = 0
-                        }
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
-                            showFoldersBar.toggle()
-                        }
+                        toggleFoldersBar()
                     } label: {
                         Image(systemName: "text.below.folder")
                             .font(.subheadline.weight(.medium))
