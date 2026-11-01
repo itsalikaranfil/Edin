@@ -52,20 +52,6 @@ extension Product {
         }
     }
 
-    /// Date the free trial ends (and billing starts) if it begins at `start`.
-    func oneTrialEndDate(from start: Date = Date(), calendar: Calendar = .current) -> Date? {
-        guard let period = oneFreeTrialOffer?.period else { return nil }
-        let component: Calendar.Component
-        switch period.unit {
-        case .day: component = .day
-        case .week: component = .weekOfYear
-        case .month: component = .month
-        case .year: component = .year
-        @unknown default: return nil
-        }
-        return calendar.date(byAdding: component, value: period.value, to: start)
-    }
-
     /// One-line billing summary for plan pickers; annual shows its monthly equivalent.
     var oneBillingSummary: String {
         guard let period = subscription?.subscriptionPeriod else { return onePeriodDescription }

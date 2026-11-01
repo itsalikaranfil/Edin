@@ -91,9 +91,9 @@ struct SubscriptionView: View {
 
     private var ctaCaption: String? {
         guard canSubscribe, !isPurchasing else { return nil }
-        if showTrialCTA, let product = selectedResolvedProduct {
+        if showTrialCTA, let product = selectedResolvedProduct, let trial = product.oneTrialDurationText {
             return String(
-                localized: "No payment now. Then \(product.displayPrice)/\(product.oneShortPeriodLabel), cancel anytime."
+                localized: "\(trial) free, then \(product.displayPrice)/\(product.oneShortPeriodLabel). Cancel anytime."
             )
         }
         if let product = selectedResolvedProduct {
@@ -137,7 +137,6 @@ struct SubscriptionView: View {
                     } else {
                         benefitsSection
                         plansSection
-                        trialTimelineSection
                         legalSection
                     }
                 }
@@ -223,21 +222,6 @@ struct SubscriptionView: View {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(Color.appBackground)
         )
-    }
-
-    @ViewBuilder
-    private var trialTimelineSection: some View {
-        if showTrialCTA,
-           let product = selectedResolvedProduct,
-           let trialDurationText = product.oneTrialDurationText,
-           let trialEndDate = product.oneTrialEndDate() {
-            PaywallTrialTimeline(
-                trialDurationText: trialDurationText,
-                trialEndDate: trialEndDate,
-                renewalPriceText: "\(product.displayPrice)/\(product.oneShortPeriodLabel)"
-            )
-            .transition(.opacity.combined(with: .move(edge: .top)))
-        }
     }
 
     private var plansSection: some View {
