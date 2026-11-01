@@ -1,0 +1,18 @@
+Paste into App Store Connect → App Review Information → Notes (and attach your screen recording)
+
+---
+
+Guideline 3.1.2(c) — Subscriptions
+
+We have addressed the missing subscription disclosure and Terms of Use link as follows:
+
+• App Store metadata: The App Description (or EULA field in App Information) includes a functional link to our Terms of Use. The Privacy Policy URL field contains our Privacy Policy. See APP_STORE_METADATA_3_1_2c.txt in our project for the exact URLs used.
+
+• In-app purchase screen (Settings → Upgrade): The subscription sheet now displays:
+  – Subscription title (e.g. One+ Monthly / One+ Annual), subscription length, and price (StoreKit localized price).
+  – Functional links to Terms of Use and Privacy Policy.
+  – Standard subscription disclosure text regarding billing, auto-renewal, and Account Settings.
+
+The attached screen recording demonstrates the subscription screen on iPad (or iPhone), including tapping Terms of Use and Privacy Policy to confirm the links open correctly.
+
+Thank you.

@@ -1,0 +1,19 @@
+App Store Connect — Guideline 3.1.2(c) metadata (manual steps)
+================================================================
+
+Copy these URLs into App Store Connect. They match LegalURLs.swift in the app.
+
+1) TERMS OF USE (EULA) — required in App Description OR custom EULA field
+   URL:
+   https://www.notion.so/Terms-of-Service-for-One-31a84999cf38805fb589e188e1b7c0c1
+
+   Example line for App Description:
+   Terms of Use (EULA): https://www.notion.so/Terms-of-Service-for-One-31a84999cf38805fb589e188e1b7c0c1
+
+   Alternatively: App Information → EULA → attach or link your custom terms (same document).
+
+2) PRIVACY POLICY URL — App Privacy / Privacy Policy field
+   URL:
+   https://www.notion.so/Privacy-Policy-for-One-31a84999cf38800383ebf9000759f3ce
+
+3) After updating metadata, attach a screen recording per Apple’s request (subscription screen showing Terms of Use, Privacy Policy links, and purchase flow). Paste the note from APP_REVIEW_NOTES_3_1_2c.txt into App Review Information → Notes.

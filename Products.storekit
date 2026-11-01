@@ -1,0 +1,150 @@
+{
+  "appPolicies" : {
+    "eula" : "",
+    "policies" : [
+      {
+        "locale" : "en_US",
+        "policyText" : "",
+        "policyURL" : ""
+      }
+    ]
+  },
+  "identifier" : "AAA5C309",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_askToBuyEnabled" : false,
+    "_billingGracePeriodEnabled" : false,
+    "_billingIssuesEnabled" : false,
+    "_disableDialogs" : false,
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_renewalBillingIssuesEnabled" : false,
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+
+    ],
+    "_timeRate" : 0
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "FF081157",
+      "localizations" : [
+
+      ],
+      "name" : "One",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "1.99",
+          "familyShareable" : false,
+          "groupNumber" : 3,
+          "internalID" : "C4E91A2B",
+          "introductoryOffer" : {
+            "displayPrice" : "0.00",
+            "internalID" : "7D1AF003",
+            "numberOfPeriods" : 1,
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
+          "localizations" : [
+            {
+              "description" : "1 week subscription, auto-renewing. Billed weekly.",
+              "displayName" : "Edin+ Weekly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.ali.oneapp.weekly",
+          "recurringSubscriptionPeriod" : "P1W",
+          "referenceName" : "One+ Weekly",
+          "subscriptionGroupID" : "FF081157",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "4.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "F2DC248C",
+          "introductoryOffer" : {
+            "displayPrice" : "0.00",
+            "internalID" : "7D1AF002",
+            "numberOfPeriods" : 1,
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
+          "localizations" : [
+            {
+              "description" : "1 month subscription, auto-renewing. Billed monthly.",
+              "displayName" : "Edin+ Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.ali.oneapp.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "One+ Monthly",
+          "subscriptionGroupID" : "FF081157",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "49.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "BD353464",
+          "introductoryOffer" : {
+            "displayPrice" : "0.00",
+            "internalID" : "7D1AF001",
+            "numberOfPeriods" : 1,
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
+          "localizations" : [
+            {
+              "description" : "1 year subscription, auto-renewing. Billed annually.",
+              "displayName" : "Edin+ Annual",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.ali.oneapp.annual",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "One+ Annual",
+          "subscriptionGroupID" : "FF081157",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

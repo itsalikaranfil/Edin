@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22758" systemVersion="23F79" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="Alarm" representedClassName="Alarm" syncable="YES" codeGenerationType="class">
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isEnabled" optional="YES" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="YES"/>
+        <attribute name="label" optional="YES" attributeType="String" defaultValueString="Alarm"/>
+        <attribute name="repeatOption" optional="YES" attributeType="String" defaultValueString="Never"/>
+        <attribute name="repeatWeekdays" optional="YES" attributeType="String"/>
+        <attribute name="snoozeDurationMinutes" optional="YES" attributeType="Integer 16" defaultValueString="9" usesScalarValueType="YES"/>
+        <attribute name="snoozeEnabled" optional="YES" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="YES"/>
+        <attribute name="sound" optional="YES" attributeType="String" defaultValueString="Default"/>
+        <attribute name="time" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+    </entity>
+    <entity name="Attachment" representedClassName="Attachment" syncable="YES" codeGenerationType="class">
+        <attribute name="byteCount" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="data" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
+        <attribute name="filename" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="sortOrder" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="typeIdentifier" optional="YES" attributeType="String"/>
+        <relationship name="event" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Event" inverseName="attachments" inverseEntity="Event"/>
+        <relationship name="reminder" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Reminder" inverseName="attachments" inverseEntity="Reminder"/>
+    </entity>
+    <entity name="ChecklistItem" representedClassName="ChecklistItem" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isCompleted" optional="YES" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="NO"/>
+        <attribute name="sortOrder" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="title" optional="YES" attributeType="String"/>
+        <relationship name="event" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Event" inverseName="checklistItems" inverseEntity="Event"/>
+        <relationship name="habit" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Habit" inverseName="checklistItems" inverseEntity="Habit"/>
+        <relationship name="reminder" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Reminder" inverseName="checklistItems" inverseEntity="Reminder"/>
+    </entity>
+    <entity name="Event" representedClassName="Event" syncable="YES" codeGenerationType="class">
+        <attribute name="alert" optional="YES" attributeType="String" defaultValueString="None"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="date" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="endTime" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="excludedDates" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isAllDay" optional="YES" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="NO"/>
+        <attribute name="isFlagged" optional="YES" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="NO"/>
+        <attribute name="notes" optional="YES" attributeType="String"/>
+        <attribute name="repeatOption" optional="YES" attributeType="String" defaultValueString="Never"/>
+        <attribute name="secondAlert" optional="YES" attributeType="String" defaultValueString="None"/>
+        <attribute name="startTime" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="title" optional="YES" attributeType="String"/>
+        <relationship name="attachments" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Attachment" inverseName="event" inverseEntity="Attachment"/>
+        <relationship name="checklistItems" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ChecklistItem" inverseName="event" inverseEntity="ChecklistItem"/>
+        <relationship name="folder" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Folder" inverseName="events" inverseEntity="Folder"/>
+    </entity>
+    <entity name="Folder" representedClassName="Folder" syncable="YES" codeGenerationType="class">
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <attribute name="sortOrder" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <relationship name="events" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Event" inverseName="folder" inverseEntity="Event"/>
+        <relationship name="habits" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Habit" inverseName="folder" inverseEntity="Habit"/>
+        <relationship name="reminders" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Reminder" inverseName="folder" inverseEntity="Reminder"/>
+    </entity>
+    <entity name="Habit" representedClassName="Habit" syncable="YES" codeGenerationType="class">
+        <attribute name="alert" optional="YES" attributeType="String" defaultValueString="None"/>
+        <attribute name="completedDates" optional="YES" attributeType="String"/>
+        <attribute name="completionDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="date" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="excludedDates" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isCompleted" optional="YES" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="NO"/>
+        <attribute name="repeatOption" optional="YES" attributeType="String" defaultValueString="Daily"/>
+        <attribute name="time" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="title" optional="YES" attributeType="String"/>
+        <relationship name="checklistItems" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ChecklistItem" inverseName="habit" inverseEntity="ChecklistItem"/>
+        <relationship name="folder" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Folder" inverseName="habits" inverseEntity="Folder"/>
+    </entity>
+    <entity name="Reminder" representedClassName="Reminder" syncable="YES" codeGenerationType="class">
+        <attribute name="alert" optional="YES" attributeType="String" defaultValueString="None"/>
+        <attribute name="completionDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="date" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="excludedDates" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isCompleted" optional="YES" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="NO"/>
+        <attribute name="isFlagged" optional="YES" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="NO"/>
+        <attribute name="notes" optional="YES" attributeType="String"/>
+        <attribute name="repeatOption" optional="YES" attributeType="String" defaultValueString="Never"/>
+        <attribute name="secondAlert" optional="YES" attributeType="String" defaultValueString="None"/>
+        <attribute name="time" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="title" optional="YES" attributeType="String"/>
+        <relationship name="attachments" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Attachment" inverseName="reminder" inverseEntity="Attachment"/>
+        <relationship name="checklistItems" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ChecklistItem" inverseName="reminder" inverseEntity="ChecklistItem"/>
+        <relationship name="folder" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Folder" inverseName="reminders" inverseEntity="Folder"/>
+    </entity>
+</model>
