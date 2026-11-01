@@ -667,7 +667,7 @@ struct ToolbarGlassConfirmButton: View {
     var action: () -> Void
 
     private var checkmarkLightBlue: Color {
-        Color(red: 0.73, green: 0.78, blue: 0.90)
+        Color(red: 0.73, green: 0.82, blue: 0.99)
     }
 
     var body: some View {
