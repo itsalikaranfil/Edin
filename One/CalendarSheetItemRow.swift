@@ -744,7 +744,7 @@ struct CalendarSheetFilterBar: View {
                 .foregroundColor(Color.primaryText)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .glassCapsulePill(active: isFilterActive)
+                .sheetFilterPill(active: isFilterActive)
                 .contentShape(Capsule())
             }
             .menuStyle(.button)
@@ -765,7 +765,7 @@ struct CalendarSheetFilterBar: View {
                 .foregroundColor(Color.primaryText)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .glassCapsulePill(active: showFlaggedOnly)
+                .sheetFilterPill(active: showFlaggedOnly)
                 .contentShape(Capsule())
             }
             .buttonStyle(.plain)
@@ -788,7 +788,7 @@ struct CalendarSheetFilterBar: View {
                     .foregroundColor(Color.primaryText)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
-                    .glassCapsulePill()
+                    .sheetFilterPill()
                     .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
@@ -796,5 +796,32 @@ struct CalendarSheetFilterBar: View {
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 8)
+    }
+}
+
+private extension View {
+    /// Liquid glass on the flat white light-mode sheet reads as a dark drop shadow,
+    /// so light mode uses a flat fill instead.
+    func sheetFilterPill(active: Bool = false) -> some View {
+        modifier(SheetFilterPillModifier(active: active))
+    }
+}
+
+private struct SheetFilterPillModifier: ViewModifier {
+    let active: Bool
+    @Environment(\.colorScheme) private var colorScheme
+
+    func body(content: Content) -> some View {
+        if colorScheme == .dark {
+            content.glassCapsulePill(active: active)
+        } else {
+            content.background {
+                Capsule()
+                    .fill(Color.pillBackground)
+                    .overlay {
+                        Capsule().fill(Color.primaryText.opacity(active ? 0.1 : 0))
+                    }
+            }
+        }
     }
 }
