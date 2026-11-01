@@ -92,6 +92,17 @@ struct CalendarView: View {
         return targetHeight - midHeight
     }
 
+    /// Week-mode counterpart: rest under the week row, or drop below FoldersBar while it is shown.
+    private var weekFoldersCoverExtraHeight: CGFloat {
+        guard showFoldersBar,
+              let weekHeight = weekModeSheetHeight,
+              foldersBarFrame != .zero else { return 0 }
+        let midHeight = SheetDetent.mid.height(in: calendarContainerHeight)
+        let revealPadding: CGFloat = 16
+        let targetHeight = calendarContainerHeight - (foldersBarFrame.maxY + revealPadding)
+        return targetHeight - max(weekHeight, midHeight)
+    }
+
     private var sheetDetent: Binding<SheetDetent> {
         Binding(
             get: { isWeekMode ? .full : .mid },
@@ -187,7 +198,7 @@ struct CalendarView: View {
                 if !showFolders && viewingFolder == nil && !showAlarms {
                     CalendarDaySheet(
                         detent: sheetDetent,
-                        coverExtraHeight: isWeekMode ? 0 : foldersCoverExtraHeight,
+                        coverExtraHeight: isWeekMode ? weekFoldersCoverExtraHeight : foldersCoverExtraHeight,
                         expandedHeight: weekModeSheetHeight,
                         header: {
                             CalendarSheetFilterBar(
