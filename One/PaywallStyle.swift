@@ -8,138 +8,48 @@
 import SwiftUI
 import StoreKit
 
-extension LinearGradient {
-    /// Edin+ brand gradient used by the paywall CTA, badges, and selection rings.
-    static let paywallBrand = LinearGradient(
-        colors: [Color.paywallViolet, Color.paywallPink, Color.paywallOrange],
-        startPoint: .leading,
-        endPoint: .trailing
-    )
-
-    static let paywallBrandDiagonal = LinearGradient(
-        colors: [Color.paywallViolet, Color.paywallPink, Color.paywallOrange],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
-}
-
-// MARK: - Background
-
-/// Slowly drifting aurora that fades into black, so content stays readable below the hero.
-struct PaywallAuroraBackground: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    private static let colors: [Color] = {
-        let top: [Color] = [.paywallViolet, .paywallPink, .paywallOrange]
-        let glow: [Color] = [
-            Color(red: 0.20, green: 0.09, blue: 0.42),
-            Color(red: 0.42, green: 0.07, blue: 0.30),
-            Color(red: 0.38, green: 0.14, blue: 0.05)
-        ]
-        let fade: [Color] = [
-            Color(red: 0.04, green: 0.03, blue: 0.07),
-            Color(red: 0.05, green: 0.02, blue: 0.06),
-            Color(red: 0.04, green: 0.03, blue: 0.05)
-        ]
-        let bottom: [Color] = [.black, .black, .black]
-        return top + glow + fade + bottom
-    }()
-
-    var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: reduceMotion)) { context in
-            let time = reduceMotion ? 0 : Float(context.date.timeIntervalSinceReferenceDate)
-            MeshGradient(width: 3, height: 4, points: Self.points(at: time), colors: Self.colors)
-        }
-        .ignoresSafeArea()
-    }
-
-    private static func points(at time: Float) -> [SIMD2<Float>] {
-        let slow = time * 0.35
-        let topMidX: Float = 0.5 + 0.12 * sin(slow)
-        let leftY: Float = 0.26 + 0.04 * sin(slow * 1.3)
-        let centerX: Float = 0.5 + 0.16 * cos(slow * 0.9)
-        let centerY: Float = 0.30 + 0.05 * sin(slow)
-        let rightY: Float = 0.24 + 0.04 * cos(slow * 1.1)
-        let lowMidX: Float = 0.5 + 0.10 * sin(slow * 0.7)
-
-        var points: [SIMD2<Float>] = []
-        points.append(SIMD2(0, 0))
-        points.append(SIMD2(topMidX, 0))
-        points.append(SIMD2(1, 0))
-        points.append(SIMD2(0, leftY))
-        points.append(SIMD2(centerX, centerY))
-        points.append(SIMD2(1, rightY))
-        points.append(SIMD2(0, 0.55))
-        points.append(SIMD2(lowMidX, 0.58))
-        points.append(SIMD2(1, 0.55))
-        points.append(SIMD2(0, 1))
-        points.append(SIMD2(0.5, 1))
-        points.append(SIMD2(1, 1))
-        return points
-    }
-}
-
 // MARK: - Hero
 
+/// Logo, title, and tagline. A soft spotlight lifts the logo off the page in both appearances.
 struct PaywallHero: View {
     let tagline: String
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var haloRotation: Double = 0
-
-    private let logoSize: CGFloat = 104
+    private let logoSize: CGFloat = 96
 
     var body: some View {
-        VStack(spacing: 18) {
-            ZStack {
-                Circle()
-                    .fill(
-                        AngularGradient(
-                            colors: [.paywallViolet, .paywallPink, .paywallOrange, .paywallViolet],
-                            center: .center
-                        )
-                    )
-                    .frame(width: logoSize * 1.5, height: logoSize * 1.5)
-                    .blur(radius: 36)
-                    .opacity(0.9)
-                    .rotationEffect(.degrees(haloRotation))
+        VStack(spacing: 16) {
+            Image("logoOne")
+                .resizable()
+                .scaledToFill()
+                .frame(width: logoSize, height: logoSize)
+                .clipShape(RoundedRectangle(cornerRadius: logoSize * 0.225, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: logoSize * 0.225, style: .continuous)
+                        .strokeBorder(Color.primaryText.opacity(0.08), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.22), radius: 24, x: 0, y: 14)
+                .background(
+                    Circle()
+                        .fill(Color.primaryText.opacity(0.06))
+                        .frame(width: logoSize * 2.2, height: logoSize * 2.2)
+                        .blur(radius: 30)
+                )
+                .accessibilityHidden(true)
 
-                Image("logoOne")
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: logoSize, height: logoSize)
-                    .clipShape(RoundedRectangle(cornerRadius: logoSize * 0.225, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: logoSize * 0.225, style: .continuous)
-                            .strokeBorder(Color.white.opacity(0.18), lineWidth: 1)
-                    )
-                    .shadow(color: .black.opacity(0.55), radius: 22, x: 0, y: 14)
+            VStack(spacing: 8) {
+                Text("Edin+")
+                    .font(.system(size: 40, weight: .bold))
+                    .tracking(-0.5)
+                    .foregroundStyle(Color.primaryText)
+
+                Text(tagline)
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .frame(height: logoSize * 1.5)
-            .accessibilityHidden(true)
-
-            HStack(spacing: 0) {
-                Text("Edin")
-                    .foregroundStyle(.white)
-                Text("+")
-                    .foregroundStyle(LinearGradient.paywallBrand)
-            }
-            .font(.system(size: 44, weight: .heavy, design: .rounded))
-            .accessibilityElement(children: .combine)
-
-            Text(tagline)
-                .font(.title3.weight(.medium))
-                .foregroundStyle(.white.opacity(0.75))
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity)
-        .onAppear {
-            guard !reduceMotion else { return }
-            withAnimation(.linear(duration: 14).repeatForever(autoreverses: false)) {
-                haloRotation = 360
-            }
-        }
     }
 }
 
@@ -154,20 +64,17 @@ struct PaywallBenefitRow: View {
         HStack(alignment: .center, spacing: 14) {
             Image(systemName: icon)
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.primaryText)
                 .frame(width: 36, height: 36)
-                .background(
-                    RoundedRectangle(cornerRadius: 11, style: .continuous)
-                        .fill(LinearGradient.paywallBrandDiagonal)
-                )
+                .background(Circle().fill(Color.pillBackground))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(LocalizedStringKey(title))
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.primaryText)
                 Text(LocalizedStringKey(subtitle))
                     .font(.system(size: 13))
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -180,28 +87,23 @@ struct PaywallBenefitRow: View {
 
 struct PaywallBadge: View {
     enum Style {
-        case gradient
+        case solid
         case subtle
     }
 
     let text: String
-    var style: Style = .gradient
+    var style: Style = .solid
 
     var body: some View {
         Text(text)
-            .font(.system(size: 10, weight: .heavy))
+            .font(.system(size: 10, weight: .bold))
             .tracking(0.6)
-            .foregroundStyle(.white)
+            .foregroundStyle(style == .solid ? Color.screenBackground : Color.primaryText)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background {
-                switch style {
-                case .gradient:
-                    Capsule().fill(LinearGradient.paywallBrand)
-                case .subtle:
-                    Capsule().fill(Color.white.opacity(0.14))
-                }
-            }
+            .background(
+                Capsule().fill(style == .solid ? Color.primaryText : Color.pillBackground)
+            )
     }
 }
 
@@ -225,13 +127,13 @@ struct PaywallPlanOption: View {
             onTap()
         } label: {
             HStack(alignment: .center, spacing: 14) {
-                selectionRing
+                selectionIndicator
 
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
                         Text(title)
                             .font(.system(size: 17, weight: .semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Color.primaryText)
                             .lineLimit(1)
 
                         if let savingsPercent {
@@ -245,14 +147,14 @@ struct PaywallPlanOption: View {
 
                     Text(product.oneBillingSummary)
                         .font(.system(size: 13))
-                        .foregroundStyle(.white.opacity(0.6))
+                        .foregroundStyle(.secondary)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
 
                     if showTrialBadge, let trial = product.oneTrialDurationText {
                         Text("\(trial) free, then auto-renews")
                             .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(LinearGradient.paywallBrand)
+                            .foregroundStyle(Color.primaryText)
                     }
                 }
 
@@ -261,22 +163,22 @@ struct PaywallPlanOption: View {
                 VStack(alignment: .trailing, spacing: 1) {
                     Text(product.displayPrice)
                         .font(.system(size: 17, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color.primaryText)
                     Text("/\(product.oneShortPeriodLabel)")
                         .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.55))
+                        .foregroundStyle(.secondary)
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 16)
             .background(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(Color.white.opacity(isSelected ? 0.10 : 0.05))
+                    .fill(Color.appBackground)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .strokeBorder(
-                        isSelected ? AnyShapeStyle(LinearGradient.paywallBrand) : AnyShapeStyle(Color.white.opacity(0.10)),
+                        isSelected ? Color.primaryText : Color.primaryText.opacity(0.08),
                         lineWidth: isSelected ? 2 : 1
                     )
             )
@@ -287,16 +189,16 @@ struct PaywallPlanOption: View {
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
-    private var selectionRing: some View {
+    private var selectionIndicator: some View {
         ZStack {
             Circle()
-                .strokeBorder(Color.white.opacity(isSelected ? 0 : 0.3), lineWidth: 1.5)
+                .strokeBorder(Color.primaryText.opacity(isSelected ? 0 : 0.25), lineWidth: 1.5)
             if isSelected {
                 Circle()
-                    .fill(LinearGradient.paywallBrandDiagonal)
+                    .fill(Color.primaryText)
                 Image(systemName: "checkmark")
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.screenBackground)
             }
         }
         .frame(width: 24, height: 24)
@@ -319,7 +221,7 @@ struct PaywallTrialTimeline: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("How your free trial works")
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.primaryText)
 
             VStack(alignment: .leading, spacing: 18) {
                 step(
@@ -328,40 +230,29 @@ struct PaywallTrialTimeline: View {
                     detail: String(localized: "Unlock everything in Edin+ for \(trialDurationText), free.")
                 )
                 step(
-                    icon: "bell.fill",
+                    icon: "calendar",
                     title: String(localized: "Before \(endDateText)"),
                     detail: String(localized: "Cancel anytime in Settings and you won’t be charged.")
                 )
                 step(
-                    icon: "crown.fill",
+                    icon: "checkmark",
                     title: endDateText,
                     detail: String(localized: "Your plan starts at \(renewalPriceText).")
                 )
             }
             .background(alignment: .leading) {
-                Capsule()
-                    .fill(
-                        LinearGradient(
-                            colors: [.paywallViolet, .paywallPink, .paywallOrange],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .frame(width: 3)
-                    .padding(.vertical, 14)
-                    .padding(.leading, 14.5)
-                    .opacity(0.7)
+                Rectangle()
+                    .fill(Color.primaryText.opacity(0.12))
+                    .frame(width: 2)
+                    .padding(.vertical, 16)
+                    .padding(.leading, 15)
             }
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(Color.white.opacity(0.05))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
+                .fill(Color.appBackground)
         )
     }
 
@@ -369,18 +260,17 @@ struct PaywallTrialTimeline: View {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: icon)
                 .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.screenBackground)
                 .frame(width: 32, height: 32)
-                .background(Circle().fill(LinearGradient.paywallBrandDiagonal))
-                .background(Circle().fill(Color.black).padding(-3))
+                .background(Circle().fill(Color.primaryText))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.primaryText)
                 Text(detail)
                     .font(.system(size: 13))
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -390,68 +280,36 @@ struct PaywallTrialTimeline: View {
 
 // MARK: - CTA
 
+/// Solid, inverted capsule (black in Light, white in Dark).
 struct PaywallCTAButton: View {
     let title: String
     var isEnabled: Bool = true
     var isLoading: Bool = false
     let action: () -> Void
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var shimmerPhase: CGFloat = -0.6
-
     var body: some View {
         Button(action: action) {
             HStack(spacing: 8) {
                 if isLoading {
                     ProgressView()
-                        .tint(.white)
+                        .tint(Color.screenBackground)
                         .scaleEffect(0.85)
                 }
                 Text(title)
-                    .font(.system(size: 18, weight: .bold))
+                    .font(.system(size: 17, weight: .semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
-            .foregroundStyle(isEnabled ? Color.white : Color.white.opacity(0.45))
+            .foregroundStyle(isEnabled ? Color.screenBackground : Color.primaryText.opacity(0.4))
             .frame(maxWidth: .infinity)
-            .frame(height: 58)
-            .background {
-                if isEnabled {
-                    Capsule().fill(LinearGradient.paywallBrand)
-                } else {
-                    Capsule().fill(Color.white.opacity(0.12))
-                }
-            }
-            .overlay {
-                if isEnabled && !reduceMotion {
-                    shimmer
-                }
-            }
-            .clipShape(Capsule())
-            .shadow(color: isEnabled ? Color.paywallPink.opacity(0.5) : .clear, radius: 20, x: 0, y: 8)
+            .frame(height: 56)
+            .background(
+                Capsule().fill(isEnabled ? Color.primaryText : Color.pillBackground)
+            )
+            .shadow(color: .black.opacity(isEnabled ? 0.18 : 0), radius: 14, x: 0, y: 6)
         }
         .buttonStyle(PaywallPressStyle())
         .disabled(!isEnabled)
-        .onAppear {
-            guard !reduceMotion else { return }
-            withAnimation(.linear(duration: 2.4).delay(0.8).repeatForever(autoreverses: false)) {
-                shimmerPhase = 1.4
-            }
-        }
-    }
-
-    private var shimmer: some View {
-        GeometryReader { geo in
-            LinearGradient(
-                colors: [.clear, .white.opacity(0.38), .clear],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
-            .frame(width: geo.size.width * 0.3)
-            .rotationEffect(.degrees(18))
-            .offset(x: geo.size.width * shimmerPhase)
-        }
-        .allowsHitTesting(false)
     }
 }
 

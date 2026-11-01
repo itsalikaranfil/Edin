@@ -66,9 +66,4 @@ extension Color {
 
     /// Deeper red for soft glows only.
     static let premiumRedDeep = Color(red: 0.62, green: 0.03, blue: 0.09)
-
-    /// Edin+ paywall gradient stops (violet → pink → orange), lit behind the black-and-white logo.
-    static let paywallViolet = Color(red: 0.49, green: 0.36, blue: 1.0)
-    static let paywallPink = Color(red: 1.0, green: 0.29, blue: 0.58)
-    static let paywallOrange = Color(red: 1.0, green: 0.58, blue: 0.24)
 }

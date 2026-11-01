@@ -120,7 +120,8 @@ struct SubscriptionView: View {
     
     var body: some View {
         ZStack(alignment: .topLeading) {
-            PaywallAuroraBackground()
+            Color.screenBackground
+                .ignoresSafeArea()
 
             ScrollView {
                 VStack(spacing: 28) {
@@ -130,7 +131,7 @@ struct SubscriptionView: View {
                     if purchaseManager.hasLifetimePurchase {
                         Text("You already own Edin+ Lifetime. No further purchase is needed.")
                             .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.7))
+                            .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
                     } else {
@@ -157,8 +158,7 @@ struct SubscriptionView: View {
             .padding(.leading, 20)
             .padding(.top, 16)
         }
-        .environment(\.colorScheme, .dark)
-        .presentationBackground(.black)
+        .presentationBackground(Color.screenBackground)
         .alert("Error", isPresented: $showError) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -221,11 +221,7 @@ struct SubscriptionView: View {
         .padding(18)
         .background(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(.ultraThinMaterial)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
+                .fill(Color.appBackground)
         )
     }
 
@@ -248,7 +244,6 @@ struct SubscriptionView: View {
         VStack(spacing: 10) {
             if purchaseManager.isLoading && orderedProducts.isEmpty {
                 ProgressView()
-                    .tint(.white)
                     .padding()
             } else if !orderedProducts.isEmpty {
                 // Annual first: it is the default pick and carries the savings and trial.
@@ -271,7 +266,7 @@ struct SubscriptionView: View {
                 VStack(spacing: 12) {
                     Text("Unable to load plans")
                         .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.7))
+                        .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
 
                     Button {
@@ -282,10 +277,10 @@ struct SubscriptionView: View {
                         Text("Tap to retry")
                             .font(.subheadline)
                             .fontWeight(.semibold)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Color.screenBackground)
                             .padding(.horizontal, 18)
                             .padding(.vertical, 10)
-                            .background(Capsule().fill(LinearGradient.paywallBrand))
+                            .background(Capsule().fill(Color.primaryText))
                     }
                     .buttonStyle(PaywallPressStyle())
                 }
@@ -309,10 +304,10 @@ struct SubscriptionView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "checkmark.shield.fill")
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(LinearGradient.paywallBrand)
+                        .foregroundStyle(Color.primaryText)
                     Text(ctaCaption)
                         .font(.footnote)
-                        .foregroundStyle(.white.opacity(0.7))
+                        .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                 }
             }
@@ -334,7 +329,7 @@ struct SubscriptionView: View {
             }) {
                 Text("Restore purchase")
                     .font(.footnote.weight(.medium))
-                    .foregroundStyle(.white.opacity(0.55))
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(.horizontal, 20)
@@ -342,9 +337,9 @@ struct SubscriptionView: View {
         .padding(.bottom, 8)
         .background {
             LinearGradient(
-                colors: [.black.opacity(0), .black.opacity(0.88), .black],
+                colors: [Color.screenBackground.opacity(0), Color.screenBackground],
                 startPoint: .top,
-                endPoint: .bottom
+                endPoint: .init(x: 0.5, y: 0.3)
             )
             .ignoresSafeArea(edges: .bottom)
         }
@@ -355,18 +350,18 @@ struct SubscriptionView: View {
             if purchaseManager.isEligibleForFreeTrial, let trialDurationText {
                 Text("New subscribers get a \(trialDurationText) free trial on any Edin+ plan. After the trial, the plan you chose renews at its listed price unless you cancel at least 24 hours before the trial ends. The free trial is available once per Apple ID.")
                     .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.45))
+                    .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
             Text("Payment will be charged to your Apple ID account at confirmation of purchase. Subscriptions renew automatically unless canceled at least 24 hours before the end of the current period. You can manage and cancel subscriptions in your Account Settings.")
                 .font(.caption2)
-                .foregroundStyle(.white.opacity(0.45))
+                .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             Text("TestFlight / Sandbox may show shortened renewal dates (for example, a monthly plan ending in a day). Production billing follows the weekly, monthly, or yearly period.")
                 .font(.caption2)
-                .foregroundStyle(.white.opacity(0.45))
+                .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 20) {
@@ -375,7 +370,7 @@ struct SubscriptionView: View {
             }
             .font(.caption)
             .fontWeight(.medium)
-            .tint(.white.opacity(0.75))
+            .tint(Color.primaryText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, 4)
