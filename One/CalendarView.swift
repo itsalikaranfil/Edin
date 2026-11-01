@@ -46,7 +46,10 @@ struct CalendarView: View {
     @State private var showMonthYearPicker = false
     @State private var monthSlideDirection: Int = 0
     @State private var isMonthChanging = false
-    @State private var sheetDetent: SheetDetent = .mid
+    /// Sheet dragged up: grid shows only the anchor week. Persists until the user drags the sheet down.
+    @AppStorage("calendarWeekMode") private var isWeekMode = false
+    @State private var calendarGridTop: CGFloat = 0
+    @State private var monthRevealedForFolders = false
     @State private var foldersSheetDetent: SheetDetent = .mid
     @State private var folderItemsSheetDetent: SheetDetent = .mid
     @State private var showFolders = false
@@ -90,6 +93,95 @@ struct CalendarView: View {
         return targetHeight - midHeight
     }
 
+    /// Grid layout: the full month is laid out while FoldersBar is shown (or still hiding) in week mode.
+    private var showsWeekOnly: Bool {
+        isWeekMode && !monthRevealedForFolders
+    }
+
+    /// Sheet position: week height unless FoldersBar is shown.
+    private var sheetShowsWeekOnly: Bool {
+        isWeekMode && !showFoldersBar
+    }
+
+    private var sheetDetent: Binding<SheetDetent> {
+        Binding(
+            get: { sheetShowsWeekOnly ? .full : .mid },
+            set: { newValue in
+                let weekMode = newValue == .full
+                guard weekMode != sheetShowsWeekOnly else { return }
+                monthSlideDirection = 0
+                isWeekMode = weekMode
+                if weekMode {
+                    showFoldersBar = false
+                    collapseMonthAfterSheetSettles()
+                } else {
+                    monthRevealedForFolders = false
+                }
+            }
+        )
+    }
+
+    /// In week mode the month swaps in/out under the sheet without animation, so FoldersBar never slides;
+    /// only the sheet animates.
+    private func toggleFoldersBar() {
+        let spring = Animation.spring(response: 0.35, dampingFraction: 0.86)
+        guard isWeekMode else {
+            withAnimation(spring) { showFoldersBar.toggle() }
+            return
+        }
+
+        if showFoldersBar {
+            withAnimation(spring) { showFoldersBar = false }
+            collapseMonthAfterSheetSettles()
+        } else {
+            monthSlideDirection = 0
+            withoutAnimation { monthRevealedForFolders = true }
+            // Next run loop, after FoldersBar has been measured at its month position.
+            DispatchQueue.main.async {
+                withAnimation(spring) { showFoldersBar = true }
+            }
+        }
+    }
+
+    private func collapseMonthAfterSheetSettles() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            guard !showFoldersBar else { return }
+            withoutAnimation { monthRevealedForFolders = false }
+        }
+    }
+
+    private func withoutAnimation(_ body: () -> Void) {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction, body)
+    }
+
+    /// Sheet top (in `calendarContainer`) that leaves the header, weekday row, and one week row visible.
+    private var weekModeSheetTop: CGFloat? {
+        guard calendarGridTop > 0 else { return nil }
+        let weekRowGap: CGFloat = 12
+        return calendarGridTop + DayCellView.rowHeight + weekRowGap
+    }
+
+    /// Day whose week is shown in week mode.
+    private var weekAnchorDay: Date {
+        if let selectedDay, calendar.isDate(selectedDay, equalTo: currentMonth, toGranularity: .month) {
+            return selectedDay
+        }
+        if calendar.isDate(Date(), equalTo: currentMonth, toGranularity: .month) {
+            return calendar.startOfDay(for: Date())
+        }
+        return monthIdentity
+    }
+
+    private var anchorWeekStart: Date {
+        calendar.dateInterval(of: .weekOfYear, for: weekAnchorDay)?.start ?? calendar.startOfDay(for: weekAnchorDay)
+    }
+
+    private var daysInAnchorWeek: [Date] {
+        (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: anchorWeekStart) }
+    }
+
     private var alarmCountForSelectedDay: Int {
         AlarmDaySchedule.countFiring(
             on: selectedDay ?? Date(),
@@ -123,11 +215,18 @@ struct CalendarView: View {
                             )
                         }
                     )
+                    .opacity(showsWeekOnly ? 0 : 1)
+                    .allowsHitTesting(!showsWeekOnly)
 
                     Spacer(minLength: 0)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .onPreferenceChange(FoldersBarFrameKey.self) { foldersBarFrame = $0 }
+                .onPreferenceChange(CalendarGridTopKey.self) { top in
+                    // Slide transitions offset the grid mid-flight; keep the resting position.
+                    guard !isMonthChanging, top > 0 else { return }
+                    calendarGridTop = top
+                }
                 .background(
                     GeometryReader { proxy in
                         Color.clear.onAppear {
@@ -141,8 +240,10 @@ struct CalendarView: View {
 
                 if !showFolders && viewingFolder == nil && !showAlarms {
                     CalendarDaySheet(
-                        detent: $sheetDetent,
-                        coverExtraHeight: foldersCoverExtraHeight,
+                        detent: sheetDetent,
+                        coverExtraHeight: sheetShowsWeekOnly ? 0 : foldersCoverExtraHeight,
+                        expandedTop: weekModeSheetTop,
+                        expandedTopCoordinateSpace: "calendarContainer",
                         header: {
                             CalendarSheetFilterBar(
                                 sheetFilter: $sheetFilter,
@@ -316,9 +417,7 @@ struct CalendarView: View {
 
                     Button {
                         Haptics.selection()
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
-                            showFoldersBar.toggle()
-                        }
+                        toggleFoldersBar()
                     } label: {
                         Image(systemName: "text.below.folder")
                             .font(.subheadline.weight(.medium))
@@ -348,7 +447,7 @@ struct CalendarView: View {
 
                 // Calendar grid
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 6) {
-                    ForEach(daysInMonth, id: \.self) { date in
+                    ForEach(showsWeekOnly ? daysInAnchorWeek : daysInMonth, id: \.self) { date in
                         DayCellView(
                             date: date,
                             isToday: calendar.isDateInToday(date),
@@ -359,6 +458,10 @@ struct CalendarView: View {
                             onTap: {
                                 Haptics.selection()
                                 selectedDay = date
+                                if showsWeekOnly {
+                                    // Keep the anchor week stable when tapping an adjacent-month day.
+                                    currentMonth = date
+                                }
                                 selectedDayManager.selectedDay = date
                             }
                         )
@@ -366,14 +469,17 @@ struct CalendarView: View {
                 }
                 .padding(.horizontal)
                 .animation(nil, value: currentMonth)
-            }
-            .id(monthIdentity)
-            .transition(
-                .asymmetric(
-                    insertion: .move(edge: monthSlideDirection > 0 ? .bottom : .top),
-                    removal: .move(edge: monthSlideDirection > 0 ? .top : .bottom)
+                .background(
+                    GeometryReader { proxy in
+                        Color.clear.preference(
+                            key: CalendarGridTopKey.self,
+                            value: proxy.frame(in: .named("calendarContainer")).minY
+                        )
+                    }
                 )
-            )
+            }
+            .id(showsWeekOnly ? anchorWeekStart : monthIdentity)
+            .transition(calendarGridTransition)
         }
         .clipped()
         .padding(.vertical, 12)
@@ -388,12 +494,22 @@ struct CalendarView: View {
                           abs(verticalAmount) > 25
                     else { return }
 
-                    if verticalAmount < 0 {
-                        changeMonth(1)
+                    let direction = verticalAmount < 0 ? 1 : -1
+                    if showsWeekOnly {
+                        changeWeek(direction)
                     } else {
-                        changeMonth(-1)
+                        changeMonth(direction)
                     }
                 }
+        )
+    }
+
+    /// Slides on month/week swipes; cross-fades when toggling week mode.
+    private var calendarGridTransition: AnyTransition {
+        guard monthSlideDirection != 0 else { return .opacity }
+        return .asymmetric(
+            insertion: .move(edge: monthSlideDirection > 0 ? .bottom : .top),
+            removal: .move(edge: monthSlideDirection > 0 ? .top : .bottom)
         )
     }
 
@@ -413,6 +529,25 @@ struct CalendarView: View {
         withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) {
             currentMonth = newMonth
         }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            isMonthChanging = false
+        }
+    }
+
+    private func changeWeek(_ direction: Int) {
+        guard !isMonthChanging,
+              let newDay = calendar.date(byAdding: .day, value: 7 * direction, to: weekAnchorDay)
+        else { return }
+
+        isMonthChanging = true
+        monthSlideDirection = direction
+
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) {
+            selectedDay = newDay
+            currentMonth = newDay
+        }
+        selectedDayManager.selectedDay = newDay
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
             isMonthChanging = false
@@ -776,7 +911,18 @@ struct CalendarView: View {
     }
 }
 
+private struct CalendarGridTopKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        let next = nextValue()
+        if next > 0 { value = next }
+    }
+}
+
 struct DayCellView: View {
+    /// Day circle plus item dot; week mode sizes the sheet from this.
+    static let rowHeight: CGFloat = 45
+
     let date: Date
     let isToday: Bool
     let isCurrentMonth: Bool
@@ -829,6 +975,7 @@ struct DayCellView: View {
             }
         }
         .frame(maxWidth: .infinity)
+        .frame(height: Self.rowHeight)
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
     }
