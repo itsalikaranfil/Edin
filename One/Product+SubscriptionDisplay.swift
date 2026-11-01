@@ -52,6 +52,22 @@ extension Product {
         }
     }
 
+    /// One-line billing summary for plan pickers; annual shows its monthly equivalent.
+    var oneBillingSummary: String {
+        guard let period = subscription?.subscriptionPeriod else { return onePeriodDescription }
+        switch (period.unit, period.value) {
+        case (.year, 1):
+            let perMonth = (price / 12).formatted(priceFormatStyle)
+            return String(localized: "Just \(perMonth)/month, billed yearly")
+        case (.month, 1):
+            return String(localized: "Billed monthly")
+        case (.week, 1), (.day, 7):
+            return String(localized: "Billed weekly")
+        default:
+            return onePeriodDescription
+        }
+    }
+
     /// Short period unit for compact labels ("week" / "month" / "year").
     var oneShortPeriodLabel: String {
         if let period = subscription?.subscriptionPeriod {

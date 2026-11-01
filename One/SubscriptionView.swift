@@ -77,23 +77,23 @@ struct SubscriptionView: View {
         if let plan = purchaseManager.activeSubscriptionPlan {
             return String(localized: "You are subscribed to \(plan.shortName)")
         }
-        return String(localized: "Create unlimited reminders with Edin+")
+        return String(localized: "Plan your days without limits.")
     }
     
     private var primaryButtonTitle: String {
         if isPurchasing { return String(localized: "Processing...") }
-        if showTrialCTA, let trialDurationText {
-            return String(localized: "Start \(trialDurationText) Free")
+        if showTrialCTA {
+            return String(localized: "Start My Free Trial")
         }
         if isManaging { return String(localized: "Upgrade") }
-        return String(localized: "Subscribe")
+        return String(localized: "Get Edin+")
     }
 
     private var ctaCaption: String? {
         guard canSubscribe, !isPurchasing else { return nil }
-        if showTrialCTA, let product = selectedResolvedProduct {
+        if showTrialCTA, let product = selectedResolvedProduct, let trial = product.oneTrialDurationText {
             return String(
-                localized: "Then \(product.displayPrice)/\(product.oneShortPeriodLabel). Cancel anytime."
+                localized: "\(trial) free, then \(product.displayPrice)/\(product.oneShortPeriodLabel). Cancel anytime."
             )
         }
         if let product = selectedResolvedProduct {
@@ -119,39 +119,43 @@ struct SubscriptionView: View {
     }
     
     var body: some View {
-        ZStack {
-            PremiumGlowBackground()
-            
+        ZStack(alignment: .topLeading) {
+            Color.screenBackground
+                .ignoresSafeArea()
+
             ScrollView {
                 VStack(spacing: 28) {
-                    VStack(spacing: 12) {
-                        HStack {
-                            SheetClosePill(size: 40) {
-                                dismiss()
-                            }
-                            Spacer()
-                        }
-
-                        heroSection
-                    }
+                    PaywallHero(tagline: taglineText)
+                        .padding(.top, 52)
 
                     if purchaseManager.hasLifetimePurchase {
                         Text("You already own Edin+ Lifetime. No further purchase is needed.")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
                     } else {
-                        featuresSection
+                        benefitsSection
                         plansSection
-                        ctaSection
                         legalSection
                     }
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 8)
-                .padding(.bottom, 32)
+                .padding(.bottom, 24)
+                .animation(.spring(response: 0.35, dampingFraction: 0.86), value: showTrialCTA)
             }
+            .scrollIndicators(.hidden)
+            .safeAreaInset(edge: .bottom) {
+                if !purchaseManager.hasLifetimePurchase {
+                    ctaSection
+                }
+            }
+
+            SheetClosePill(size: 40) {
+                dismiss()
+            }
+            .padding(.leading, 20)
+            .padding(.top, 16)
         }
         .presentationBackground(Color.screenBackground)
         .alert("Error", isPresented: $showError) {
@@ -190,55 +194,33 @@ struct SubscriptionView: View {
 
     // MARK: - Sections
 
-    private var heroSection: some View {
+    private var benefitsSection: some View {
         VStack(spacing: 16) {
-            Image("logoOne")
-                .resizable()
-                .scaledToFill()
-                .frame(width: 84, height: 84, alignment: .center)
-                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                .shadow(color: Color.premiumRed.opacity(0.45), radius: 18, x: 0, y: 8)
-
-            Text("Edin+")
-                .font(.system(size: 34, weight: .heavy))
-                .foregroundColor(Color.primaryText)
-
-            Text(taglineText)
-                .font(.title3)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    private var featuresSection: some View {
-        VStack(spacing: 14) {
-            PaywallFeatureRow(
+            PaywallBenefitRow(
                 icon: "infinity",
                 title: "Unlimited everything",
                 subtitle: "Reminders, events and habits — no 6-item cap."
             )
-            PaywallFeatureRow(
+            PaywallBenefitRow(
                 icon: "chart.line.uptrend.xyaxis",
                 title: "Habit streaks & stats",
                 subtitle: "Track progress and keep the streak alive."
             )
-            PaywallFeatureRow(
+            PaywallBenefitRow(
                 icon: "alarm.fill",
                 title: "Alarms & widgets",
                 subtitle: "Wake up and glance at your day from Home Screen."
             )
-            PaywallFeatureRow(
+            PaywallBenefitRow(
                 icon: "icloud.fill",
                 title: "iCloud sync",
                 subtitle: "Your plans stay in sync across devices."
             )
         }
-        .padding(16)
+        .padding(18)
         .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color.appBackground.opacity(0.72))
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(Color.appBackground)
         )
     }
 
@@ -248,9 +230,10 @@ struct SubscriptionView: View {
                 ProgressView()
                     .padding()
             } else if !orderedProducts.isEmpty {
-                ForEach(orderedProducts, id: \.id) { product in
+                // Annual first: it is the default pick and carries the savings and trial.
+                ForEach(orderedProducts.reversed(), id: \.id) { product in
                     let isAnnual = product.id == ProductID.annual.rawValue
-                    PaywallPlanCard(
+                    PaywallPlanOption(
                         product: product,
                         isSelected: selectedProduct?.id == product.id,
                         isCurrent: product.id == currentPlanID,
@@ -267,7 +250,7 @@ struct SubscriptionView: View {
                 VStack(spacing: 12) {
                     Text("Unable to load plans")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
 
                     Button {
@@ -278,13 +261,12 @@ struct SubscriptionView: View {
                         Text("Tap to retry")
                             .font(.subheadline)
                             .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 16)
+                            .foregroundStyle(Color.screenBackground)
+                            .padding(.horizontal, 18)
                             .padding(.vertical, 10)
-                            .background(Color.premiumRed)
-                            .cornerRadius(10)
+                            .background(Capsule().fill(Color.primaryText))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PaywallPressStyle())
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 24)
@@ -294,42 +276,24 @@ struct SubscriptionView: View {
 
     private var ctaSection: some View {
         VStack(spacing: 10) {
-            Button(action: {
+            PaywallCTAButton(
+                title: primaryButtonTitle,
+                isEnabled: canSubscribe && !isPurchasing,
+                isLoading: isPurchasing
+            ) {
                 purchaseSelectedProduct()
-            }) {
-                HStack {
-                    if isPurchasing {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                            .scaleEffect(0.8)
-                    }
-                    Text(primaryButtonTitle)
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(canSubscribe ? .white : Color.primaryText.opacity(0.45))
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 18)
-                .background {
-                    if canSubscribe {
-                        Capsule().fill(Color.premiumRed)
-                    } else {
-                        Capsule().fill(Color.appBackground)
-                    }
-                }
-                .shadow(
-                    color: canSubscribe ? Color.premiumRed.opacity(0.35) : .clear,
-                    radius: 14,
-                    x: 0,
-                    y: 6
-                )
             }
-            .disabled(isPurchasing || !canSubscribe)
 
             if let ctaCaption {
-                Text(ctaCaption)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.shield.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.primaryText)
+                    Text(ctaCaption)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
             }
 
             Button(action: {
@@ -348,10 +312,20 @@ struct SubscriptionView: View {
                 }
             }) {
                 Text("Restore purchase")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(.secondary)
             }
-            .padding(.top, 4)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 20)
+        .padding(.bottom, 8)
+        .background {
+            LinearGradient(
+                colors: [Color.screenBackground.opacity(0), Color.screenBackground],
+                startPoint: .top,
+                endPoint: .init(x: 0.5, y: 0.3)
+            )
+            .ignoresSafeArea(edges: .bottom)
         }
     }
 
@@ -360,27 +334,27 @@ struct SubscriptionView: View {
             if purchaseManager.isEligibleForFreeTrial, let trialDurationText {
                 Text("New subscribers get a \(trialDurationText) free trial on any Edin+ plan. After the trial, the plan you chose renews at its listed price unless you cancel at least 24 hours before the trial ends. The free trial is available once per Apple ID.")
                     .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
             Text("Payment will be charged to your Apple ID account at confirmation of purchase. Subscriptions renew automatically unless canceled at least 24 hours before the end of the current period. You can manage and cancel subscriptions in your Account Settings.")
                 .font(.caption2)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             Text("TestFlight / Sandbox may show shortened renewal dates (for example, a monthly plan ending in a day). Production billing follows the weekly, monthly, or yearly period.")
                 .font(.caption2)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            
+
             HStack(spacing: 20) {
                 Link("Terms of Use", destination: LegalURLs.termsOfUse)
                 Link("Privacy Policy", destination: LegalURLs.privacyPolicy)
             }
             .font(.caption)
             .fontWeight(.medium)
-            .tint(Color.eventBlue)
+            .tint(Color.primaryText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, 4)
@@ -411,7 +385,7 @@ struct SubscriptionView: View {
         }
         
         if selectedProduct == nil && selectedProductID == nil,
-           let firstProduct = orderedProducts.first ?? purchaseManager.products.first {
+           let firstProduct = annualProduct ?? orderedProducts.first ?? purchaseManager.products.first {
             selectedProduct = firstProduct
             selectedProductID = firstProduct.id
         }

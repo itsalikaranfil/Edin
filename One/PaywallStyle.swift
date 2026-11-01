@@ -8,44 +8,54 @@
 import SwiftUI
 import StoreKit
 
-extension LinearGradient {
-    /// Bright premium red gradient used by the paywall CTA and Settings card.
-    static let premiumGradient = LinearGradient(
-        colors: [Color.premiumRedBright, Color.premiumRed],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
-}
+// MARK: - Hero
 
-struct PaywallBadge: View {
-    enum Style {
-        case filled
-        case outlined
-    }
+/// Logo, title, and tagline. A soft spotlight lifts the logo off the page in both appearances.
+struct PaywallHero: View {
+    let tagline: String
 
-    let text: String
-    var style: Style = .filled
+    private let logoSize: CGFloat = 96
 
     var body: some View {
-        Text(text)
-            .font(.system(size: 10, weight: .bold))
-            .tracking(0.6)
-            .foregroundColor(style == .filled ? .white : Color.premiumRed)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background {
-                if style == .filled {
-                    Capsule().fill(Color.premiumRed)
-                } else {
-                    Capsule()
-                        .strokeBorder(Color.premiumRed.opacity(0.55), lineWidth: 1)
-                        .background(Capsule().fill(Color.premiumRed.opacity(0.1)))
-                }
+        VStack(spacing: 16) {
+            Image("logoOne")
+                .resizable()
+                .scaledToFill()
+                .frame(width: logoSize, height: logoSize)
+                .clipShape(RoundedRectangle(cornerRadius: logoSize * 0.225, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: logoSize * 0.225, style: .continuous)
+                        .strokeBorder(Color.primaryText.opacity(0.08), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.22), radius: 24, x: 0, y: 14)
+                .background(
+                    Circle()
+                        .fill(Color.primaryText.opacity(0.06))
+                        .frame(width: logoSize * 2.2, height: logoSize * 2.2)
+                        .blur(radius: 30)
+                )
+                .accessibilityHidden(true)
+
+            VStack(spacing: 8) {
+                Text("Edin+")
+                    .font(.system(size: 40, weight: .bold))
+                    .tracking(-0.5)
+                    .foregroundStyle(Color.primaryText)
+
+                Text(tagline)
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 
-struct PaywallFeatureRow: View {
+// MARK: - Benefits
+
+struct PaywallBenefitRow: View {
     let icon: String
     let title: String
     let subtitle: String
@@ -53,21 +63,18 @@ struct PaywallFeatureRow: View {
     var body: some View {
         HStack(alignment: .center, spacing: 14) {
             Image(systemName: icon)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(Color.premiumRed)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Color.primaryText)
                 .frame(width: 36, height: 36)
-                .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.premiumRed.opacity(0.12))
-                )
+                .background(Circle().fill(Color.pillBackground))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(LocalizedStringKey(title))
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(Color.primaryText)
+                    .foregroundStyle(Color.primaryText)
                 Text(LocalizedStringKey(subtitle))
                     .font(.system(size: 13))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -76,28 +83,33 @@ struct PaywallFeatureRow: View {
     }
 }
 
-struct PremiumGlowBackground: View {
+// MARK: - Badges
+
+struct PaywallBadge: View {
+    enum Style {
+        case solid
+        case subtle
+    }
+
+    let text: String
+    var style: Style = .solid
+
     var body: some View {
-        ZStack {
-            Color.screenBackground
-            RadialGradient(
-                colors: [
-                    Color.premiumRed.opacity(0.28),
-                    Color.premiumRed.opacity(0.08),
-                    Color.clear
-                ],
-                center: .top,
-                startRadius: 20,
-                endRadius: 320
+        Text(text)
+            .font(.system(size: 10, weight: .bold))
+            .tracking(0.6)
+            .foregroundStyle(style == .solid ? Color.screenBackground : Color.primaryText)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                Capsule().fill(style == .solid ? Color.primaryText : Color.pillBackground)
             )
-            .offset(y: -40)
-            .allowsHitTesting(false)
-        }
-        .ignoresSafeArea()
     }
 }
 
-struct PaywallPlanCard: View {
+// MARK: - Plans
+
+struct PaywallPlanOption: View {
     let product: Product
     let isSelected: Bool
     var isCurrent: Bool = false
@@ -105,70 +117,138 @@ struct PaywallPlanCard: View {
     var savingsPercent: Int? = nil
     let onTap: () -> Void
 
+    private var title: String {
+        ProductID(rawValue: product.id)?.shortName ?? product.displayName
+    }
+
     var body: some View {
-        Button(action: onTap) {
-            HStack(alignment: .center, spacing: 12) {
+        Button {
+            Haptics.selection()
+            onTap()
+        } label: {
+            HStack(alignment: .center, spacing: 14) {
+                selectionIndicator
+
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 8) {
-                        Text(product.oneDisplayTitle)
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(Color.primaryText)
+                    HStack(spacing: 6) {
+                        Text(title)
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(Color.primaryText)
                             .lineLimit(1)
 
-                        if showTrialBadge {
-                            PaywallBadge(
-                                text: String(localized: "\(product.oneTrialDurationText ?? "7 days") FREE").uppercased()
-                            )
-                        }
-
                         if let savingsPercent {
-                            PaywallBadge(
-                                text: String(localized: "SAVE \(savingsPercent)%"),
-                                style: .outlined
-                            )
+                            PaywallBadge(text: String(localized: "SAVE \(savingsPercent)%"))
                         }
 
                         if isCurrent {
-                            PaywallBadge(text: String(localized: "CURRENT"), style: .outlined)
+                            PaywallBadge(text: String(localized: "CURRENT"), style: .subtle)
                         }
                     }
 
-                    Text(product.onePeriodDescription)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    Text(product.oneBillingSummary)
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
+
+                    if showTrialBadge, let trial = product.oneTrialDurationText {
+                        Text("\(trial) free, then auto-renews")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color.primaryText)
+                    }
                 }
 
                 Spacer(minLength: 8)
 
-                VStack(alignment: .trailing, spacing: 2) {
+                VStack(alignment: .trailing, spacing: 1) {
                     Text(product.displayPrice)
                         .font(.system(size: 17, weight: .bold))
-                        .foregroundColor(Color.primaryText)
+                        .foregroundStyle(Color.primaryText)
                     Text("/\(product.oneShortPeriodLabel)")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
-
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 22, weight: .regular))
-                    .foregroundColor(isSelected ? Color.premiumRed : Color.secondary.opacity(0.45))
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 14)
+            .padding(.vertical, 16)
             .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(isSelected ? Color.premiumRed.opacity(0.12) : Color.appBackground)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(Color.appBackground)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(isSelected ? Color.premiumRed : Color.clear, lineWidth: 2)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .strokeBorder(
+                        isSelected ? Color.primaryText : Color.primaryText.opacity(0.08),
+                        lineWidth: isSelected ? 2 : 1
+                    )
             )
+            .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PaywallPressStyle())
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isSelected)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private var selectionIndicator: some View {
+        ZStack {
+            Circle()
+                .strokeBorder(Color.primaryText.opacity(isSelected ? 0 : 0.25), lineWidth: 1.5)
+            if isSelected {
+                Circle()
+                    .fill(Color.primaryText)
+                Image(systemName: "checkmark")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Color.screenBackground)
+            }
+        }
+        .frame(width: 24, height: 24)
     }
 }
+
+// MARK: - CTA
+
+/// Solid, inverted capsule (black in Light, white in Dark).
+struct PaywallCTAButton: View {
+    let title: String
+    var isEnabled: Bool = true
+    var isLoading: Bool = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                if isLoading {
+                    ProgressView()
+                        .tint(Color.screenBackground)
+                        .scaleEffect(0.85)
+                }
+                Text(title)
+                    .font(.system(size: 17, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .foregroundStyle(isEnabled ? Color.screenBackground : Color.primaryText.opacity(0.4))
+            .frame(maxWidth: .infinity)
+            .frame(height: 56)
+            .background(
+                Capsule().fill(isEnabled ? Color.primaryText : Color.pillBackground)
+            )
+            .shadow(color: .black.opacity(isEnabled ? 0.18 : 0), radius: 14, x: 0, y: 6)
+        }
+        .buttonStyle(PaywallPressStyle())
+        .disabled(!isEnabled)
+    }
+}
+
+struct PaywallPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: configuration.isPressed)
+    }
+}
+
+// MARK: - Settings card
 
 enum SettingsPremiumCardState {
     case loading
@@ -195,27 +275,10 @@ struct SettingsPremiumCard: View {
 
             case .upgrade(let eligibleForTrial):
                 VStack(alignment: .leading, spacing: 16) {
-                    HStack(spacing: 12) {
-                        Text("Edin+")
-                            .font(.system(size: 26, weight: .heavy))
-                            .foregroundColor(.white)
-                            .lineLimit(1)
-
-                        Spacer(minLength: 8)
-
-                        if eligibleForTrial {
-                            Text("7 DAYS FREE")
-                                .font(.system(size: 10, weight: .bold))
-                                .tracking(0.6)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 9)
-                                .padding(.vertical, 5)
-                                .background(Capsule().fill(Color.white.opacity(0.22)))
-                                .overlay(
-                                    Capsule().strokeBorder(Color.white.opacity(0.45), lineWidth: 1)
-                                )
-                        }
-                    }
+                    Text("Edin+")
+                        .font(.system(size: 26, weight: .heavy))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
 
                     Text(
                         eligibleForTrial
