@@ -33,8 +33,8 @@ extension Color {
 
     /// Liquid Glass tint for the calendar day sheet, so it separates from the screen behind it.
     static let calendarSheetGlassTint = dynamic(
-        light: UIColor(white: 0.90, alpha: 0.55),
-        dark: UIColor(white: 0.10, alpha: 0.65)
+        light: UIColor(white: 0.94, alpha: 0.55),
+        dark: UIColor(white: 0.14, alpha: 0.65)
     )
 
     /// Filter pill background.
