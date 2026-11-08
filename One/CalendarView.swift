@@ -51,6 +51,10 @@ struct CalendarView: View {
     @AppStorage("calendarWeekMode") private var isWeekMode = false
     @State private var calendarGridTop: CGFloat = 0
     @State private var monthRevealedForFolders = false
+    /// Grid layout actually rendered; trails `showsWeekOnly` so the change can animate as a collapse.
+    @State private var gridLaysOutWeekOnly = UserDefaults.standard.bool(forKey: "calendarWeekMode")
+    /// Month layout drawn collapsed: other weeks hidden and the anchor week shifted into the top row.
+    @State private var monthRowsCollapsed = false
     @State private var foldersSheetDetent: SheetDetent = .mid
     @State private var folderItemsSheetDetent: SheetDetent = .mid
     @State private var showFolders = false
@@ -181,6 +185,38 @@ struct CalendarView: View {
             return calendar.startOfDay(for: Date())
         }
         return monthIdentity
+    }
+
+    /// Row of the anchor week within the month layout.
+    private var anchorRowIndex: Int {
+        (daysInMonth.firstIndex { calendar.isDate($0, inSameDayAs: anchorWeekStart) } ?? 0) / 7
+    }
+
+    /// Collapses the month into the anchor week (other weeks fade, the week slides to the top) before
+    /// switching to the one-row layout, and plays it in reverse when expanding.
+    private func animateGridLayout(toWeekOnly weekOnly: Bool) {
+        let spring = Animation.spring(response: 0.4, dampingFraction: 0.9)
+        if weekOnly {
+            withAnimation(spring) {
+                monthRowsCollapsed = true
+            } completion: {
+                guard showsWeekOnly else { return }
+                withoutAnimation {
+                    gridLaysOutWeekOnly = true
+                    monthRowsCollapsed = false
+                }
+            }
+        } else {
+            withoutAnimation {
+                gridLaysOutWeekOnly = false
+                monthRowsCollapsed = true
+            }
+            // Next run loop, once the month layout is in place in its collapsed position.
+            DispatchQueue.main.async {
+                guard !showsWeekOnly else { return }
+                withAnimation(spring) { monthRowsCollapsed = false }
+            }
+        }
     }
 
     private var anchorWeekStart: Date {
@@ -391,6 +427,9 @@ struct CalendarView: View {
             .onChange(of: currentMonth) { _, _ in
                 scheduleFetchPredicateUpdate()
             }
+            .onChange(of: showsWeekOnly) { _, weekOnly in
+                animateGridLayout(toWeekOnly: weekOnly)
+            }
             .onAppear {
                 selectedDay = selectedDayManager.selectedDay ?? Date()
                 currentMonth = selectedDay ?? Date()
@@ -456,10 +495,11 @@ struct CalendarView: View {
                 .padding(.horizontal)
 
                 // Calendar grid. Eager rows: a lazy grid builds its cells mid-transition and stutters.
-                let gridDays = showsWeekOnly ? daysInAnchorWeek : daysInMonth
+                let gridDays = gridLaysOutWeekOnly ? daysInAnchorWeek : daysInMonth
                 let markers = dayMarkers(for: gridDays)
+                let collapsedRow = monthRowsCollapsed && !gridLaysOutWeekOnly ? anchorRowIndex : nil
                 // Only the grid slides, clipped to its own area, so the title never lingers over it.
-                ZStack {
+                ZStack(alignment: .top) {
                     VStack(spacing: 6) {
                         ForEach(Array(stride(from: 0, to: gridDays.count, by: 7)), id: \.self) { rowStart in
                             HStack(spacing: 8) {
@@ -484,8 +524,10 @@ struct CalendarView: View {
                                     )
                                 }
                             }
+                            .opacity(collapsedRow == nil || collapsedRow == rowStart / 7 ? 1 : 0)
                         }
                     }
+                    .offset(y: collapsedRow.map { -CGFloat($0) * (DayCellView.rowHeight + 6) } ?? 0)
                     .padding(.horizontal)
                     .animation(nil, value: currentMonth)
                     .background(
@@ -496,7 +538,7 @@ struct CalendarView: View {
                             )
                         }
                     )
-                    .id(showsWeekOnly ? anchorWeekStart : monthIdentity)
+                    .id(gridLaysOutWeekOnly ? anchorWeekStart : monthIdentity)
                     .transition(calendarGridTransition)
                 }
                 .clipped()
