@@ -81,7 +81,7 @@ struct SubscriptionView: View {
     }
 
     private var headlineTitle: String {
-        if !isManaging, !purchaseManager.hasLifetimePurchase,
+        if !purchaseManager.hasLifetimePurchase,
            let annual = annualProduct, let monthly = monthlyProduct,
            let months = annual.oneAnnualPriceInMonths(comparedTo: monthly) {
             return String(localized: "Get 12 months for the price of \(months)")
@@ -206,7 +206,10 @@ struct SubscriptionView: View {
 
     private var heroSection: some View {
         VStack(spacing: 10) {
-            PaywallHeadline(savingsPercent: isManaging ? nil : annualSavingsPercent)
+            PaywallHeadline(
+                savingsPercent: purchaseManager.hasLifetimePurchase ? nil : annualSavingsPercent,
+                isLoading: orderedProducts.isEmpty && !purchaseManager.hasLifetimePurchase
+            )
                 .padding(.bottom, 4)
 
             Text(headlineTitle)

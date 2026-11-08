@@ -10,12 +10,12 @@ import StoreKit
 
 // MARK: - Glow
 
-/// Red light falling from the top edge: a soft bloom plus faint vertical streaks.
+/// Red light falling from the top edge: a soft bloom plus four faint white light streaks.
 struct PaywallGlow: View {
     var height: CGFloat = 360
     var intensity: Double = 1
 
-    private let streakWidths: [CGFloat] = [8, 3, 16, 5, 11, 3, 20, 7, 4, 14, 6, 10, 3]
+    private let streakWidths: [CGFloat] = [10, 18, 14, 8]
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -25,23 +25,23 @@ struct PaywallGlow: View {
                 .blur(radius: height * 0.2)
                 .offset(y: -height * 0.32)
 
-            HStack(spacing: 18) {
+            HStack(spacing: 0) {
+                Spacer(minLength: 0)
                 ForEach(streakWidths.indices, id: \.self) { index in
                     Rectangle()
                         .fill(
                             LinearGradient(
-                                colors: [
-                                    Color.premiumRedBright.opacity((index.isMultiple(of: 2) ? 0.2 : 0.1) * intensity),
-                                    .clear
-                                ],
+                                colors: [Color.white.opacity(0.07 * intensity), .clear],
                                 startPoint: .top,
                                 endPoint: .bottom
                             )
                         )
                         .frame(width: streakWidths[index])
+                    Spacer(minLength: 0)
                 }
             }
-            .blur(radius: 3)
+            .padding(.horizontal, 24)
+            .blur(radius: 4)
             .frame(height: height * 0.85, alignment: .top)
         }
         .frame(maxWidth: .infinity)
@@ -86,19 +86,23 @@ struct PaywallGlowText: View {
     }
 }
 
-/// Big savings figure ("30%"), or the Edin+ wordmark when there is no saving to show.
+/// Big savings figure ("30%"). While plans load it holds the space with a placeholder; the Edin+
+/// wordmark only appears when there is no saving at all.
 struct PaywallHeadline: View {
     let savingsPercent: Int?
+    var isLoading: Bool = false
 
     var body: some View {
         Group {
             if let savingsPercent {
-                HStack(alignment: .firstTextBaseline, spacing: 2) {
-                    PaywallGlowText(text: "\(savingsPercent)", size: 104)
-                    PaywallGlowText(text: "%", size: 54)
-                }
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(Text("Save \(savingsPercent)%"))
+                percentFigure(savingsPercent)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(Text("Save \(savingsPercent)%"))
+            } else if isLoading {
+                percentFigure(30)
+                    .redacted(reason: .placeholder)
+                    .opacity(0.35)
+                    .accessibilityHidden(true)
             } else {
                 PaywallGlowText(text: "Edin+", size: 72)
                     .accessibilityLabel(Text(verbatim: "Edin+"))
@@ -106,6 +110,13 @@ struct PaywallHeadline: View {
         }
         .lineLimit(1)
         .minimumScaleFactor(0.6)
+    }
+
+    private func percentFigure(_ percent: Int) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 2) {
+            PaywallGlowText(text: "\(percent)", size: 104)
+            PaywallGlowText(text: "%", size: 54)
+        }
     }
 }
 
@@ -120,7 +131,7 @@ struct PaywallBenefitRow: View {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: icon)
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Color.premiumRedBright)
+                .foregroundStyle(.white)
                 .frame(width: 34, height: 34)
                 .background(Circle().fill(Color.white.opacity(0.07)))
 
