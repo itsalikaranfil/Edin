@@ -33,7 +33,7 @@ struct PaywallGlow: View {
                     Rectangle()
                         .fill(
                             LinearGradient(
-                                colors: [Color.white.opacity(0.07 * intensity), .clear],
+                                colors: [Color.white.opacity(0.1 * intensity), .clear],
                                 startPoint: .top,
                                 endPoint: .bottom
                             )
@@ -41,7 +41,7 @@ struct PaywallGlow: View {
                         .frame(width: streakWidths[index])
                 }
             }
-            .padding(.horizontal, 14)
+            .padding(.horizontal, 44)
             .blur(radius: 4)
             .frame(height: height * 0.85, alignment: .top)
         }
@@ -131,9 +131,9 @@ struct PaywallBenefitRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: icon)
-                .font(.system(size: 22, weight: .semibold))
+                .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(.white)
-                .frame(width: 32, height: 32)
+                .frame(width: 28, height: 28)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(LocalizedStringKey(title))
