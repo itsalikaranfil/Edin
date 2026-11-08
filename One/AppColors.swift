@@ -31,6 +31,12 @@ extension Color {
         dark: UIColor(red: 20 / 255, green: 20 / 255, blue: 20 / 255, alpha: 1)
     )
 
+    /// Liquid Glass tint for the calendar day sheet, so it separates from the screen behind it.
+    static let calendarSheetGlassTint = dynamic(
+        light: UIColor(white: 0.90, alpha: 0.55),
+        dark: UIColor(white: 0.10, alpha: 0.65)
+    )
+
     /// Filter pill background.
     static let pillBackground = dynamic(
         light: UIColor(red: 228 / 255, green: 228 / 255, blue: 230 / 255, alpha: 1),

@@ -559,7 +559,7 @@ struct CalendarView: View {
 
         return List {
             if displayItems.isEmpty {
-                EmptyListSkeletonView(accessibilityLabel: sheetEmptyMessage)
+                EmptyListSkeletonView(accessibilityLabel: sheetEmptyMessage, surface: .clear)
                     .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
@@ -584,7 +584,7 @@ struct CalendarView: View {
                     .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                     .listRowSeparator(index < displayItems.count - 1 ? .visible : .hidden, edges: .bottom)
                     .listRowSeparatorTint(Color.gray.opacity(0.25))
-                    .listRowBackground(Color.sheetSurface)
+                    .listRowBackground(Color.clear)
                 }
             }
         }
