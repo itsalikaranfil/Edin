@@ -66,4 +66,7 @@ extension Color {
 
     /// Deeper red for soft glows only.
     static let premiumRedDeep = Color(red: 0.62, green: 0.03, blue: 0.09)
+
+    /// Edin+ paywall and Settings premium card surface (always dark).
+    static let paywallBackground = Color(red: 0.075, green: 0.075, blue: 0.08)
 }
