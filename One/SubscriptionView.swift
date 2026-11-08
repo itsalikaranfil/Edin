@@ -11,6 +11,7 @@ import StoreKit
 struct SubscriptionView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.paywallDismiss) private var paywallDismiss
+    @Environment(\.paywallPullDown) private var paywallPullDown
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     
     @State private var selectedProduct: Product?
@@ -155,6 +156,17 @@ struct SubscriptionView: View {
                 .animation(.spring(response: 0.35, dampingFraction: 0.86), value: showTrialCTA)
             }
             .scrollIndicators(.hidden)
+            .onScrollGeometryChange(for: CGFloat.self) { geometry in
+                max(0, -(geometry.contentOffset.y + geometry.contentInsets.top))
+            } action: { _, overscroll in
+                paywallPullDown?.changed(overscroll)
+            }
+            .onScrollPhaseChange { oldPhase, newPhase, context in
+                guard oldPhase == .interacting, newPhase != .interacting else { return }
+                let geometry = context.geometry
+                let overscroll = max(0, -(geometry.contentOffset.y + geometry.contentInsets.top))
+                paywallPullDown?.released(overscroll, context.velocity?.dy ?? 0)
+            }
             .safeAreaInset(edge: .bottom) {
                 if !purchaseManager.hasLifetimePurchase {
                     ctaSection
@@ -541,6 +553,14 @@ extension View {
 
 extension EnvironmentValues {
     @Entry var paywallDismiss: (() -> Void)?
+    @Entry var paywallPullDown: PaywallPullDown?
+}
+
+/// Lets the paywall's scroll view drive the custom sheet: pulling down past the top moves
+/// the sheet, and releasing far or fast enough closes it.
+struct PaywallPullDown {
+    var changed: (_ overscroll: CGFloat) -> Void
+    var released: (_ overscroll: CGFloat, _ velocity: CGFloat) -> Void
 }
 
 private struct PaywallSheetModifier: ViewModifier {
@@ -580,6 +600,8 @@ private struct PaywallSheetContainer: View {
 
     @State private var isShown = false
     @State private var dragOffset: CGFloat = 0
+    @State private var pullOffset: CGFloat = 0
+    @State private var isClosing = false
 
     private let cornerRadius: CGFloat = 38
     private let slideAnimation = Animation.spring(response: 0.42, dampingFraction: 0.92)
@@ -596,6 +618,7 @@ private struct PaywallSheetContainer: View {
 
                 SubscriptionView()
                     .environment(\.paywallDismiss, close)
+                    .environment(\.paywallPullDown, pullDown)
                     .mask(alignment: .top) {
                         UnevenRoundedRectangle(
                             topLeadingRadius: cornerRadius,
@@ -608,7 +631,7 @@ private struct PaywallSheetContainer: View {
                         dragHandleArea(fullHeight: fullHeight)
                     }
                     .padding(.top, topGap)
-                    .offset(y: isShown ? dragOffset : fullHeight)
+                    .offset(y: isShown ? sheetOffset : fullHeight)
             }
         }
         .onAppear {
@@ -617,7 +640,27 @@ private struct PaywallSheetContainer: View {
     }
 
     private func dimFraction(_ fullHeight: CGFloat) -> CGFloat {
-        max(0, 1 - dragOffset / max(fullHeight, 1))
+        max(0, 1 - sheetOffset / max(fullHeight, 1))
+    }
+
+    private var sheetOffset: CGFloat {
+        dragOffset + pullOffset
+    }
+
+    private var pullDown: PaywallPullDown {
+        PaywallPullDown(
+            changed: { overscroll in
+                guard !isClosing else { return }
+                pullOffset = overscroll
+            },
+            released: { overscroll, velocity in
+                guard !isClosing else { return }
+                // Overscroll is rubber-banded, so a short distance already means a long pull.
+                if overscroll > 60 || (overscroll > 12 && velocity < -900) {
+                    close()
+                }
+            }
+        )
     }
 
     /// Drag strip along the top of the sheet; it starts right of the close button so taps reach it.
@@ -646,6 +689,8 @@ private struct PaywallSheetContainer: View {
     }
 
     private func close() {
+        guard !isClosing else { return }
+        isClosing = true
         withAnimation(.easeIn(duration: 0.25)) {
             isShown = false
         } completion: {
