@@ -163,9 +163,7 @@ struct ContentView: View {
             )
             .environment(\.managedObjectContext, viewContext)
         }
-        .sheet(isPresented: $showSubscription) {
-            SubscriptionView()
-        }
+        .paywallSheet(isPresented: $showSubscription)
         .onOpenURL { url in
             if url.scheme == "oneapp", url.host == "new" {
                 prepareNewItemContext(useToday: true)

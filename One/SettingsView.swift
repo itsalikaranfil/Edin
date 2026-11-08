@@ -244,9 +244,7 @@ struct SettingsView: View {
                 .padding(.vertical)
             }
             .background(Color.screenBackground)
-            .sheet(isPresented: $showSubscription) {
-                SubscriptionView()
-            }
+            .paywallSheet(isPresented: $showSubscription)
             .manageSubscriptionsSheet(isPresented: $showManageSubscriptions)
             .onChange(of: showManageSubscriptions) { _, isPresented in
                 if !isPresented {

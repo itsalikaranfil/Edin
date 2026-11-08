@@ -523,6 +523,24 @@ struct SubscriptionView: View {
     }
 }
 
+extension View {
+    /// Presents the paywall as a sheet. The sheet's rounded bottom corners don't reach the
+    /// display edges, so a dark backdrop is faded in behind them to hide the presenting screen.
+    func paywallSheet(isPresented: Binding<Bool>) -> some View {
+        overlay(alignment: .bottom) {
+            Color.paywallBackground
+                .frame(height: 120)
+                .ignoresSafeArea()
+                .opacity(isPresented.wrappedValue ? 1 : 0)
+                .animation(.easeInOut(duration: 0.3), value: isPresented.wrappedValue)
+                .allowsHitTesting(false)
+        }
+        .sheet(isPresented: isPresented) {
+            SubscriptionView()
+        }
+    }
+}
+
 #Preview {
     SubscriptionView()
 }
