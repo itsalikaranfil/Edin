@@ -10,6 +10,7 @@ import StoreKit
 
 struct SubscriptionView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.paywallDismiss) private var paywallDismiss
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     
     @State private var selectedProduct: Product?
@@ -161,14 +162,12 @@ struct SubscriptionView: View {
             }
 
             SheetClosePill(size: 40) {
-                dismiss()
+                closePaywall()
             }
             .padding(.leading, 20)
             .padding(.top, 16)
         }
         .environment(\.colorScheme, .dark)
-        .presentationBackground(Color.paywallBackground)
-        .background(SquareSheetBottomCorners())
         .alert("Error", isPresented: $showError) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -176,7 +175,7 @@ struct SubscriptionView: View {
         }
         .alert("Success", isPresented: $showSuccess) {
             Button("OK") {
-                dismiss()
+                closePaywall()
             }
         } message: {
             Text("Your subscription is now active! Thank you for your purchase.")
@@ -422,6 +421,14 @@ struct SubscriptionView: View {
         }
     }
     
+    private func closePaywall() {
+        if let paywallDismiss {
+            paywallDismiss()
+        } else {
+            dismiss()
+        }
+    }
+
     private func purchaseSelectedProduct() {
         Haptics.light()
         guard canSubscribe else {
@@ -491,7 +498,7 @@ struct SubscriptionView: View {
                 // Check if purchase was successful
                 if purchaseManager.hasUnlimitedAccess {
                     isPurchasing = false
-                    dismiss()
+                    closePaywall()
                 } else {
                     // Purchase completed but access not yet granted (might be pending)
                     // The transaction listener will handle this
@@ -525,55 +532,124 @@ struct SubscriptionView: View {
 }
 
 extension View {
+    /// Presents the paywall as a custom sheet: top corners rounded, bottom edge square so it
+    /// covers the bottom of the display. The system sheet always rounds its bottom corners.
     func paywallSheet(isPresented: Binding<Bool>) -> some View {
-        sheet(isPresented: isPresented) {
-            SubscriptionView()
-        }
+        modifier(PaywallSheetModifier(isPresented: isPresented))
     }
 }
 
-/// Keeps the hosting sheet's top corners rounded but squares its bottom corners so the
-/// sheet reaches the display edges. UIKit re-applies corner masks during presentation and
-/// rotation, so they're reapplied on every layout pass.
-private struct SquareSheetBottomCorners: UIViewRepresentable {
-    func makeUIView(context: Context) -> CornerMaskingView {
-        CornerMaskingView()
-    }
+extension EnvironmentValues {
+    @Entry var paywallDismiss: (() -> Void)?
+}
 
-    func updateUIView(_ uiView: CornerMaskingView, context: Context) {
-        uiView.applyMask()
-    }
+private struct PaywallSheetModifier: ViewModifier {
+    @Binding var isPresented: Bool
+    @State private var coverPresented = false
 
-    final class CornerMaskingView: UIView {
-        override init(frame: CGRect) {
-            super.init(frame: frame)
-            isUserInteractionEnabled = false
-            backgroundColor = .clear
-        }
-
-        required init?(coder: NSCoder) {
-            fatalError("init(coder:) has not been implemented")
-        }
-
-        override func didMoveToWindow() {
-            super.didMoveToWindow()
-            applyMask()
-        }
-
-        override func layoutSubviews() {
-            super.layoutSubviews()
-            applyMask()
-            DispatchQueue.main.async { [weak self] in self?.applyMask() }
-        }
-
-        func applyMask() {
-            var view = superview
-            while let current = view, !(current is UIWindow) {
-                if current.layer.cornerRadius > 0 {
-                    current.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
-                }
-                view = current.superview
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: isPresented) { _, newValue in
+                setCover(newValue)
             }
+            .onChange(of: coverPresented) { _, newValue in
+                if !newValue, isPresented { isPresented = false }
+            }
+            .onAppear {
+                if isPresented { setCover(true) }
+            }
+            .fullScreenCover(isPresented: $coverPresented) {
+                PaywallSheetContainer {
+                    setCover(false)
+                    isPresented = false
+                }
+                .presentationBackground(.clear)
+            }
+    }
+
+    private func setCover(_ value: Bool) {
+        guard coverPresented != value else { return }
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) { coverPresented = value }
+    }
+}
+
+private struct PaywallSheetContainer: View {
+    let onDismissed: () -> Void
+
+    @State private var isShown = false
+    @State private var dragOffset: CGFloat = 0
+
+    private let cornerRadius: CGFloat = 38
+    private let slideAnimation = Animation.spring(response: 0.42, dampingFraction: 0.92)
+
+    var body: some View {
+        GeometryReader { proxy in
+            let fullHeight = proxy.size.height + proxy.safeAreaInsets.top + proxy.safeAreaInsets.bottom
+            let topGap = proxy.safeAreaInsets.top + 10
+
+            ZStack(alignment: .top) {
+                Color.black
+                    .opacity(isShown ? 0.35 * dimFraction(fullHeight) : 0)
+                    .ignoresSafeArea()
+
+                SubscriptionView()
+                    .environment(\.paywallDismiss, close)
+                    .mask(alignment: .top) {
+                        UnevenRoundedRectangle(
+                            topLeadingRadius: cornerRadius,
+                            topTrailingRadius: cornerRadius,
+                            style: .continuous
+                        )
+                        .padding(.bottom, -200)
+                    }
+                    .overlay(alignment: .top) {
+                        dragHandleArea(fullHeight: fullHeight)
+                    }
+                    .padding(.top, topGap)
+                    .offset(y: isShown ? dragOffset : fullHeight)
+            }
+        }
+        .onAppear {
+            withAnimation(slideAnimation) { isShown = true }
+        }
+    }
+
+    private func dimFraction(_ fullHeight: CGFloat) -> CGFloat {
+        max(0, 1 - dragOffset / max(fullHeight, 1))
+    }
+
+    /// Drag strip along the top of the sheet; it starts right of the close button so taps reach it.
+    private func dragHandleArea(fullHeight: CGFloat) -> some View {
+        Color.clear
+            .frame(height: 76)
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+            .padding(.leading, 72)
+            .gesture(
+                DragGesture(minimumDistance: 4)
+                    .onChanged { value in
+                        let y = value.translation.height
+                        dragOffset = y > 0 ? y : y / 8
+                    }
+                    .onEnded { value in
+                        let shouldClose = value.translation.height > 140
+                            || value.predictedEndTranslation.height > 360
+                        if shouldClose {
+                            close()
+                        } else {
+                            withAnimation(slideAnimation) { dragOffset = 0 }
+                        }
+                    }
+            )
+    }
+
+    private func close() {
+        withAnimation(.easeIn(duration: 0.25)) {
+            isShown = false
+        } completion: {
+            onDismissed()
         }
     }
 }
