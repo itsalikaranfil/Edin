@@ -279,7 +279,7 @@ struct PaywallPressStyle: ButtonStyle {
 
 enum SettingsPremiumCardState {
     case loading
-    case upgrade(eligibleForTrial: Bool)
+    case upgrade(eligibleForTrial: Bool, annualSavingsPercent: Int?)
     case active(plan: ProductID)
 }
 
@@ -301,12 +301,18 @@ struct SettingsPremiumCard: View {
                 }
                 .frame(height: 120)
 
-            case .upgrade(let eligibleForTrial):
+            case .upgrade(let eligibleForTrial, let annualSavingsPercent):
                 VStack(alignment: .leading, spacing: 16) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(verbatim: "Edin+")
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundStyle(.white)
+                        Group {
+                            if let annualSavingsPercent {
+                                Text("Save \(annualSavingsPercent)% with Yearly")
+                            } else {
+                                Text(verbatim: "Edin+")
+                            }
+                        }
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(.white)
 
                         Text(
                             eligibleForTrial
