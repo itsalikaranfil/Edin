@@ -31,6 +31,18 @@ extension Color {
         dark: UIColor(red: 20 / 255, green: 20 / 255, blue: 20 / 255, alpha: 1)
     )
 
+    /// Calendar tab sheets, the calendar Folders/Alarms bars, and Upcoming item sections.
+    static let calendarSheetSurface = dynamic(
+        light: .white,
+        dark: UIColor(red: 0x1C / 255, green: 0x1C / 255, blue: 0x1E / 255, alpha: 1)
+    )
+
+    /// Hairline top edge highlight on the calendar tab sheets.
+    static let calendarSheetEdge = dynamic(
+        light: UIColor(white: 0, alpha: 0.08),
+        dark: UIColor(white: 1, alpha: 0.06)
+    )
+
     /// Filter pill background.
     static let pillBackground = dynamic(
         light: UIColor(red: 228 / 255, green: 228 / 255, blue: 230 / 255, alpha: 1),

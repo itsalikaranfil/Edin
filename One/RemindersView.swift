@@ -397,7 +397,7 @@ struct RemindersView: View {
     private func upcomingSectionBackground(isFirst: Bool, isLast: Bool) -> some View {
         if isFirst && isLast {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color.appBackground)
+                .fill(Color.calendarSheetSurface)
         } else if isFirst {
             UnevenRoundedRectangle(
                 topLeadingRadius: 10,
@@ -405,7 +405,7 @@ struct RemindersView: View {
                 bottomTrailingRadius: 0,
                 topTrailingRadius: 10
             )
-            .fill(Color.appBackground)
+            .fill(Color.calendarSheetSurface)
         } else if isLast {
             UnevenRoundedRectangle(
                 topLeadingRadius: 0,
@@ -413,9 +413,9 @@ struct RemindersView: View {
                 bottomTrailingRadius: 10,
                 topTrailingRadius: 0
             )
-            .fill(Color.appBackground)
+            .fill(Color.calendarSheetSurface)
         } else {
-            Color.appBackground
+            Color.calendarSheetSurface
         }
     }
 
@@ -481,7 +481,7 @@ struct RemindersView: View {
     private var upcomingEmptyContent: some View {
         EmptyListSkeletonView(
             accessibilityLabel: String(localized: "No events/reminders"),
-            surface: Color.appBackground,
+            surface: Color.calendarSheetSurface,
             icons: ["calendar", "circle", "calendar", "circle"]
         )
         .listRowInsets(EdgeInsets())
@@ -511,7 +511,7 @@ struct RemindersView: View {
 
                 Section {
                     EmptyListSkeletonView(
-                        surface: Color.appBackground,
+                        surface: Color.calendarSheetSurface,
                         icons: ["calendar", "circle"]
                     )
                     .listRowInsets(EdgeInsets())

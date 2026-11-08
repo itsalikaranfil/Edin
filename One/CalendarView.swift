@@ -46,10 +46,15 @@ struct CalendarView: View {
     @State private var showMonthYearPicker = false
     @State private var monthSlideDirection: Int = 0
     @State private var isMonthChanging = false
+    @State private var fetchUpdateTask: Task<Void, Never>?
     /// Sheet dragged up: grid shows only the anchor week. Persists until the user drags the sheet down.
     @AppStorage("calendarWeekMode") private var isWeekMode = false
     @State private var calendarGridTop: CGFloat = 0
     @State private var monthRevealedForFolders = false
+    /// Grid layout actually rendered; trails `showsWeekOnly` so the change can animate as a collapse.
+    @State private var gridLaysOutWeekOnly = UserDefaults.standard.bool(forKey: "calendarWeekMode")
+    /// Month layout drawn collapsed: other weeks hidden and the anchor week shifted into the top row.
+    @State private var monthRowsCollapsed = false
     @State private var foldersSheetDetent: SheetDetent = .mid
     @State private var folderItemsSheetDetent: SheetDetent = .mid
     @State private var showFolders = false
@@ -77,6 +82,14 @@ struct CalendarView: View {
         let endOfMonthStart = calendar.startOfDay(for: endOfMonth)
         let endOfMonthEnd = calendar.date(byAdding: .day, value: 1, to: endOfMonthStart)!
         return (startOfMonth, endOfMonthEnd)
+    }
+
+    /// Previous through next month, so a swipe already has the new month's items before it refetches.
+    private var fetchWindow: (start: Date, end: Date) {
+        let month = currentMonthRange
+        let start = calendar.date(byAdding: .month, value: -1, to: month.start) ?? month.start
+        let end = calendar.date(byAdding: .month, value: 1, to: month.end) ?? month.end
+        return (start, end)
     }
 
     /// Sheet height delta vs mid detent: positive covers FoldersBar; negative drops the sheet below it.
@@ -172,6 +185,38 @@ struct CalendarView: View {
             return calendar.startOfDay(for: Date())
         }
         return monthIdentity
+    }
+
+    /// Row of the anchor week within the month layout.
+    private var anchorRowIndex: Int {
+        (daysInMonth.firstIndex { calendar.isDate($0, inSameDayAs: anchorWeekStart) } ?? 0) / 7
+    }
+
+    /// Collapses the month into the anchor week (other weeks fade, the week slides to the top) before
+    /// switching to the one-row layout, and plays it in reverse when expanding.
+    private func animateGridLayout(toWeekOnly weekOnly: Bool) {
+        let spring = Animation.spring(response: 0.4, dampingFraction: 0.9)
+        if weekOnly {
+            withAnimation(spring) {
+                monthRowsCollapsed = true
+            } completion: {
+                guard showsWeekOnly else { return }
+                withoutAnimation {
+                    gridLaysOutWeekOnly = true
+                    monthRowsCollapsed = false
+                }
+            }
+        } else {
+            withoutAnimation {
+                gridLaysOutWeekOnly = false
+                monthRowsCollapsed = true
+            }
+            // Next run loop, once the month layout is in place in its collapsed position.
+            DispatchQueue.main.async {
+                guard !showsWeekOnly else { return }
+                withAnimation(spring) { monthRowsCollapsed = false }
+            }
+        }
     }
 
     private var anchorWeekStart: Date {
@@ -380,7 +425,10 @@ struct CalendarView: View {
                 }
             }
             .onChange(of: currentMonth) { _, _ in
-                updateFetchPredicates()
+                scheduleFetchPredicateUpdate()
+            }
+            .onChange(of: showsWeekOnly) { _, weekOnly in
+                animateGridLayout(toWeekOnly: weekOnly)
             }
             .onAppear {
                 selectedDay = selectedDayManager.selectedDay ?? Date()
@@ -411,6 +459,7 @@ struct CalendarView: View {
                         Text(monthYearString)
                             .font(.system(size: 28, weight: .bold))
                             .foregroundColor(Color.primaryText)
+                            .contentTransition(.numericText(countsDown: monthSlideDirection < 0))
                     }
 
                     Spacer()
@@ -445,41 +494,55 @@ struct CalendarView: View {
                 }
                 .padding(.horizontal)
 
-                // Calendar grid
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 6) {
-                    ForEach(showsWeekOnly ? daysInAnchorWeek : daysInMonth, id: \.self) { date in
-                        DayCellView(
-                            date: date,
-                            isToday: calendar.isDateInToday(date),
-                            isCurrentMonth: calendar.isDate(date, equalTo: currentMonth, toGranularity: .month),
-                            hasItems: hasItems(on: date),
-                            hasOverdueItems: hasOverdueItems(on: date),
-                            selectedDate: selectedDay,
-                            onTap: {
-                                Haptics.selection()
-                                selectedDay = date
-                                if showsWeekOnly {
-                                    // Keep the anchor week stable when tapping an adjacent-month day.
-                                    currentMonth = date
+                // Calendar grid. Eager rows: a lazy grid builds its cells mid-transition and stutters.
+                let gridDays = gridLaysOutWeekOnly ? daysInAnchorWeek : daysInMonth
+                let markers = dayMarkers(for: gridDays)
+                let collapsedRow = monthRowsCollapsed && !gridLaysOutWeekOnly ? anchorRowIndex : nil
+                // Only the grid slides, clipped to its own area, so the title never lingers over it.
+                ZStack(alignment: .top) {
+                    VStack(spacing: 6) {
+                        ForEach(Array(stride(from: 0, to: gridDays.count, by: 7)), id: \.self) { rowStart in
+                            HStack(spacing: 8) {
+                                ForEach(gridDays[rowStart..<min(rowStart + 7, gridDays.count)], id: \.self) { date in
+                                    let dayStart = calendar.startOfDay(for: date)
+                                    DayCellView(
+                                        date: date,
+                                        isToday: calendar.isDateInToday(date),
+                                        isCurrentMonth: calendar.isDate(date, equalTo: currentMonth, toGranularity: .month),
+                                        hasItems: markers.withItems.contains(dayStart),
+                                        hasOverdueItems: markers.overdue.contains(dayStart),
+                                        selectedDate: selectedDay,
+                                        onTap: {
+                                            Haptics.selection()
+                                            selectedDay = date
+                                            if showsWeekOnly {
+                                                // Keep the anchor week stable when tapping an adjacent-month day.
+                                                currentMonth = date
+                                            }
+                                            selectedDayManager.selectedDay = date
+                                        }
+                                    )
                                 }
-                                selectedDayManager.selectedDay = date
                             }
-                        )
+                            .opacity(collapsedRow == nil || collapsedRow == rowStart / 7 ? 1 : 0)
+                        }
                     }
+                    .offset(y: collapsedRow.map { -CGFloat($0) * (DayCellView.rowHeight + 6) } ?? 0)
+                    .padding(.horizontal)
+                    .animation(nil, value: currentMonth)
+                    .background(
+                        GeometryReader { proxy in
+                            Color.clear.preference(
+                                key: CalendarGridTopKey.self,
+                                value: proxy.frame(in: .named("calendarContainer")).minY
+                            )
+                        }
+                    )
+                    .id(gridLaysOutWeekOnly ? anchorWeekStart : monthIdentity)
+                    .transition(calendarGridTransition)
                 }
-                .padding(.horizontal)
-                .animation(nil, value: currentMonth)
-                .background(
-                    GeometryReader { proxy in
-                        Color.clear.preference(
-                            key: CalendarGridTopKey.self,
-                            value: proxy.frame(in: .named("calendarContainer")).minY
-                        )
-                    }
-                )
+                .clipped()
             }
-            .id(showsWeekOnly ? anchorWeekStart : monthIdentity)
-            .transition(calendarGridTransition)
         }
         .clipped()
         .padding(.vertical, 12)
@@ -490,23 +553,30 @@ struct CalendarView: View {
                     let horizontalAmount = value.translation.width
                     let verticalAmount = value.translation.height
 
-                    guard abs(verticalAmount) > abs(horizontalAmount),
-                          abs(verticalAmount) > 25
-                    else { return }
-
-                    let direction = verticalAmount < 0 ? 1 : -1
                     if showsWeekOnly {
-                        changeWeek(direction)
+                        guard abs(horizontalAmount) > abs(verticalAmount),
+                              abs(horizontalAmount) > 25
+                        else { return }
+                        changeWeek(horizontalAmount < 0 ? 1 : -1)
                     } else {
-                        changeMonth(direction)
+                        guard abs(verticalAmount) > abs(horizontalAmount),
+                              abs(verticalAmount) > 25
+                        else { return }
+                        changeMonth(verticalAmount < 0 ? 1 : -1)
                     }
                 }
         )
     }
 
-    /// Slides on month/week swipes; cross-fades when toggling week mode.
+    /// Slides vertically on month swipes and horizontally on week swipes; cross-fades when toggling week mode.
     private var calendarGridTransition: AnyTransition {
         guard monthSlideDirection != 0 else { return .opacity }
+        if showsWeekOnly {
+            return .asymmetric(
+                insertion: .move(edge: monthSlideDirection > 0 ? .trailing : .leading),
+                removal: .move(edge: monthSlideDirection > 0 ? .leading : .trailing)
+            )
+        }
         return .asymmetric(
             insertion: .move(edge: monthSlideDirection > 0 ? .bottom : .top),
             removal: .move(edge: monthSlideDirection > 0 ? .top : .bottom)
@@ -517,6 +587,20 @@ struct CalendarView: View {
         calendar.date(from: calendar.dateComponents([.year, .month], from: currentMonth)) ?? currentMonth
     }
     
+    /// Refetching re-renders the whole tab, so during a swipe it waits for the slide to finish.
+    private func scheduleFetchPredicateUpdate() {
+        fetchUpdateTask?.cancel()
+        guard isMonthChanging else {
+            updateFetchPredicates()
+            return
+        }
+        fetchUpdateTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled else { return }
+            updateFetchPredicates()
+        }
+    }
+
     private func changeMonth(_ direction: Int) {
         guard !isMonthChanging,
               let newMonth = calendar.date(byAdding: .month, value: direction, to: currentMonth)
@@ -526,7 +610,7 @@ struct CalendarView: View {
         monthSlideDirection = direction
         selectedDay = nil
 
-        withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
             currentMonth = newMonth
         }
 
@@ -543,7 +627,7 @@ struct CalendarView: View {
         isMonthChanging = true
         monthSlideDirection = direction
 
-        withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
             selectedDay = newDay
             currentMonth = newDay
         }
@@ -559,7 +643,7 @@ struct CalendarView: View {
 
         return List {
             if displayItems.isEmpty {
-                EmptyListSkeletonView(accessibilityLabel: sheetEmptyMessage)
+                EmptyListSkeletonView(accessibilityLabel: sheetEmptyMessage, surface: .clear)
                     .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
@@ -584,7 +668,7 @@ struct CalendarView: View {
                     .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                     .listRowSeparator(index < displayItems.count - 1 ? .visible : .hidden, edges: .bottom)
                     .listRowSeparatorTint(Color.gray.opacity(0.25))
-                    .listRowBackground(Color.sheetSurface)
+                    .listRowBackground(Color.clear)
                 }
             }
         }
@@ -707,99 +791,75 @@ struct CalendarView: View {
         return days
     }
     
-    private func hasItems(on date: Date) -> Bool {
-        let dayStart = calendar.startOfDay(for: date)
-        
-        let hasEvents = events.contains { event in
-            guard let eventDate = event.date else { return false }
-            let option = Recurrence.option(from: event.repeatOption)
-            return Recurrence.occurs(
-                on: dayStart,
-                baseDate: eventDate,
-                option: option,
-                excludedDates: event.excludedDatesStorage,
-                calendar: calendar
-            )
-        }
-        
-        let hasReminders = reminders.contains { reminder in
-            guard let reminderDate = reminder.date else { return false }
-            let option = Recurrence.option(from: reminder.repeatOption)
-            return Recurrence.occurs(
-                on: dayStart,
-                baseDate: reminderDate,
-                option: option,
-                excludedDates: reminder.excludedDatesStorage,
-                calendar: calendar
-            )
+    private struct DayMarkers {
+        var withItems: Set<Date> = []
+        var overdue: Set<Date> = []
+    }
+
+    /// Dot state for every visible day in one pass. Non-repeating items land on a single day, so they
+    /// are bucketed directly instead of being tested against every cell.
+    private func dayMarkers(for days: [Date]) -> DayMarkers {
+        let dayStarts = days.map { calendar.startOfDay(for: $0) }
+        let visibleDays = Set(dayStarts)
+        let todayStart = calendar.startOfDay(for: Date())
+        var markers = DayMarkers()
+
+        /// `overdueDate` is nil for items that can't be overdue (all-day events, completed reminders, habits).
+        func mark(baseDate: Date, option: RepeatOption, excludedDates: String?, overdueDate: Date?) {
+            if option == .never {
+                let day = calendar.startOfDay(for: baseDate)
+                guard visibleDays.contains(day),
+                      Recurrence.occurs(on: day, baseDate: baseDate, option: option, excludedDates: excludedDates, calendar: calendar)
+                else { return }
+                markers.withItems.insert(day)
+                if let overdueDate, day <= todayStart, calendar.startOfDay(for: overdueDate) < todayStart {
+                    markers.overdue.insert(day)
+                }
+            } else {
+                // Repeats are expected on past days, so they never mark a day overdue.
+                for day in dayStarts where !markers.withItems.contains(day) {
+                    if Recurrence.occurs(on: day, baseDate: baseDate, option: option, excludedDates: excludedDates, calendar: calendar) {
+                        markers.withItems.insert(day)
+                    }
+                }
+            }
         }
 
-        let hasHabits = habits.contains { habit in
-            guard let habitDate = habit.date else { return false }
-            let option = Recurrence.option(from: habit.repeatOption)
-            return Recurrence.occurs(
-                on: dayStart,
-                baseDate: habitDate,
-                option: option,
-                excludedDates: habit.excludedDatesStorage,
-                calendar: calendar
+        for event in events {
+            guard let date = event.date else { continue }
+            mark(
+                baseDate: date,
+                option: Recurrence.option(from: event.repeatOption),
+                excludedDates: event.excludedDatesStorage,
+                overdueDate: event.isAllDay ? nil : (event.startTime ?? date)
             )
         }
-        
-        return hasEvents || hasReminders || hasHabits
-    }
-    
-    private func hasOverdueItems(on date: Date) -> Bool {
-        let dayStart = calendar.startOfDay(for: date)
-        let todayStart = calendar.startOfDay(for: Date())
-        guard dayStart <= todayStart else { return false }
-        
-        // Check for overdue events on this day (non-repeating only — repeats are expected on past days)
-        let hasOverdueEvents = events.contains { event in
-            guard let eventDate = event.date else { return false }
-            let option = Recurrence.option(from: event.repeatOption)
-            guard option == .never else { return false }
-            guard Recurrence.occurs(
-                on: dayStart,
-                baseDate: eventDate,
-                option: option,
-                excludedDates: event.excludedDatesStorage,
-                calendar: calendar
-            ) else {
-                return false
-            }
-            guard !event.isAllDay else { return false }
-            let eventDateTime = event.startTime ?? eventDate
-            let itemStart = calendar.startOfDay(for: eventDateTime)
-            return itemStart < todayStart
-        }
-        
-        let hasOverdueReminders = reminders.contains { reminder in
-            guard !reminder.isCompleted, let reminderDate = reminder.date else { return false }
-            let option = Recurrence.option(from: reminder.repeatOption)
-            guard option == .never else { return false }
-            guard Recurrence.occurs(
-                on: dayStart,
-                baseDate: reminderDate,
-                option: option,
+        for reminder in reminders {
+            guard let date = reminder.date else { continue }
+            mark(
+                baseDate: date,
+                option: Recurrence.option(from: reminder.repeatOption),
                 excludedDates: reminder.excludedDatesStorage,
-                calendar: calendar
-            ) else {
-                return false
-            }
-            let reminderDateTime = reminder.time ?? reminderDate
-            let itemStart = calendar.startOfDay(for: reminderDateTime)
-            return itemStart < todayStart
+                overdueDate: reminder.isCompleted ? nil : (reminder.time ?? date)
+            )
         }
-        
-        return hasOverdueEvents || hasOverdueReminders
+        for habit in habits {
+            guard let date = habit.date else { continue }
+            mark(
+                baseDate: date,
+                option: Recurrence.option(from: habit.repeatOption),
+                excludedDates: habit.excludedDatesStorage,
+                overdueDate: nil
+            )
+        }
+        return markers
     }
     
     private func updateFetchPredicates() {
-        let range = currentMonthRange
+        let range = fetchWindow
         let never = RepeatOption.never.rawValue
         
-        // Month items, plus any repeating items (may fall on days in this month)
+        // Window items, plus any repeating items (may fall on days in the window)
         let eventPredicate = NSPredicate(
             format: "(date >= %@ AND date < %@) OR (repeatOption != nil AND repeatOption != %@)",
             range.start as NSDate,

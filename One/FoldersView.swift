@@ -51,7 +51,7 @@ struct FoldersView: View {
                     .id(folder.name ?? "")
                     .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                     .listRowSeparator(.hidden)
-                    .listRowBackground(Color.sheetSurface)
+                    .listRowBackground(Color.calendarSheetSurface)
                     .contextMenu {
                         if !FolderStore.isInbox(folder) {
                             Button {

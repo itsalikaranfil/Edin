@@ -52,7 +52,7 @@ struct AlarmView: View {
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     .listRowSeparator(.hidden, edges: .top)
                     .listRowSeparator(index == alarms.count - 1 ? .hidden : .visible, edges: .bottom)
-                    .listRowBackground(Color.sheetSurface)
+                    .listRowBackground(Color.calendarSheetSurface)
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                         Button(role: .destructive) {
                             deleteAlarm(alarm)
@@ -76,7 +76,7 @@ struct AlarmView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(Color.sheetSurface)
+        .background(Color.calendarSheetSurface)
         .onAppear(perform: reloadAlarms)
         .onReceive(NotificationCenter.default.publisher(for: .dataDidChange)) { _ in
             reloadAlarms()

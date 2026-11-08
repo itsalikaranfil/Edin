@@ -8,10 +8,7 @@ import SwiftUI
 extension View {
     /// Capsule liquid glass for tappable header/filter pills.
     func glassCapsulePill(active: Bool = false) -> some View {
-        let glass: Glass = active
-            ? .regular.tint(.white.opacity(0.15)).interactive()
-            : .regular.interactive()
-        return glassEffect(glass, in: .capsule)
+        modifier(GlassCapsulePillModifier(active: active))
     }
 
     /// Circle liquid glass for sheet close (X) buttons.
@@ -45,5 +42,21 @@ extension View {
                         )
                 }
         }
+    }
+}
+
+extension EnvironmentValues {
+    /// Interactive glass stretches toward the finger, so pills inside a draggable area
+    /// (e.g. the calendar sheet header) turn it off to stay put while the sheet is dragged.
+    @Entry var glassPillsInteractive: Bool = true
+}
+
+private struct GlassCapsulePillModifier: ViewModifier {
+    let active: Bool
+    @Environment(\.glassPillsInteractive) private var interactive
+
+    func body(content: Content) -> some View {
+        let base: Glass = active ? .regular.tint(.white.opacity(0.15)) : .regular
+        content.glassEffect(base.interactive(interactive), in: .capsule)
     }
 }
