@@ -272,7 +272,7 @@ enum SettingsPremiumCardState {
     case active(plan: ProductID)
 }
 
-/// Dark card with the paywall's red glow, so Settings previews the paywall.
+/// Plain dark card in the paywall's palette.
 struct SettingsPremiumCard: View {
     let state: SettingsPremiumCardState
     let onUpgrade: () -> Void
@@ -291,38 +291,41 @@ struct SettingsPremiumCard: View {
                 .frame(height: 120)
 
             case .upgrade(let eligibleForTrial):
-                VStack(spacing: 14) {
-                    PaywallGlowText(text: "Edin+", size: 44)
-                        .accessibilityLabel(Text(verbatim: "Edin+"))
+                VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(verbatim: "Edin+")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundStyle(.white)
 
-                    Text(
-                        eligibleForTrial
-                            ? String(localized: "Try everything free for 7 days, then keep it all.")
-                            : String(localized: "Unlock unlimited reminders, events and habits.")
-                    )
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.6))
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                    HStack(spacing: 16) {
-                        benefit("infinity", "Unlimited")
-                        benefit("square.grid.2x2.fill", "Widgets")
-                        benefit("icloud.fill", "Sync")
+                        Text(
+                            eligibleForTrial
+                                ? String(localized: "Try everything free for 7 days, then keep it all.")
+                                : String(localized: "Unlock unlimited reminders, events and habits.")
+                        )
+                        .font(.system(size: 14))
+                        .foregroundStyle(.white.opacity(0.55))
+                        .fixedSize(horizontal: false, vertical: true)
                     }
 
-                    PaywallCTAButton(
-                        title: eligibleForTrial
-                            ? String(localized: "Start Free Trial")
-                            : String(localized: "Upgrade to Edin+"),
-                        action: onUpgrade
-                    )
-                    .padding(.top, 4)
+                    Button(action: onUpgrade) {
+                        Text(
+                            eligibleForTrial
+                                ? String(localized: "Start Free Trial")
+                                : String(localized: "Upgrade to Edin+")
+                        )
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 48)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(Color.premiumRed)
+                        )
+                    }
+                    .buttonStyle(PaywallPressStyle())
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 18)
-                .padding(.top, 26)
-                .padding(.bottom, 18)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(18)
 
             case .active(let plan):
                 VStack(alignment: .leading, spacing: 16) {
@@ -366,9 +369,6 @@ struct SettingsPremiumCard: View {
                 .padding(18)
             }
         }
-        .background(alignment: .top) {
-            PaywallGlow(height: 220, intensity: 0.8)
-        }
         .background(Color.paywallBackground)
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .overlay(
@@ -378,14 +378,4 @@ struct SettingsPremiumCard: View {
         .environment(\.colorScheme, .dark)
     }
 
-    private func benefit(_ icon: String, _ title: String) -> some View {
-        HStack(spacing: 5) {
-            Image(systemName: icon)
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(Color.premiumRedBright)
-            Text(LocalizedStringKey(title))
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.85))
-        }
-    }
 }
