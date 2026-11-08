@@ -10,8 +10,6 @@ import StoreKit
 
 struct SubscriptionView: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.paywallDismiss) private var paywallDismiss
-    @Environment(\.paywallPullDown) private var paywallPullDown
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     
     @State private var selectedProduct: Product?
@@ -156,17 +154,6 @@ struct SubscriptionView: View {
                 .animation(.spring(response: 0.35, dampingFraction: 0.86), value: showTrialCTA)
             }
             .scrollIndicators(.hidden)
-            .onScrollGeometryChange(for: CGFloat.self) { geometry in
-                max(0, -(geometry.contentOffset.y + geometry.contentInsets.top))
-            } action: { _, overscroll in
-                paywallPullDown?.changed(overscroll)
-            }
-            .onScrollPhaseChange { oldPhase, newPhase, context in
-                guard oldPhase == .interacting, newPhase != .interacting else { return }
-                let geometry = context.geometry
-                let overscroll = max(0, -(geometry.contentOffset.y + geometry.contentInsets.top))
-                paywallPullDown?.released(overscroll, context.velocity?.dy ?? 0)
-            }
             .safeAreaInset(edge: .bottom) {
                 if !purchaseManager.hasLifetimePurchase {
                     ctaSection
@@ -174,12 +161,13 @@ struct SubscriptionView: View {
             }
 
             SheetClosePill(size: 40) {
-                closePaywall()
+                dismiss()
             }
             .padding(.leading, 20)
             .padding(.top, 16)
         }
         .environment(\.colorScheme, .dark)
+        .presentationBackground(Color.paywallBackground)
         .alert("Error", isPresented: $showError) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -187,7 +175,7 @@ struct SubscriptionView: View {
         }
         .alert("Success", isPresented: $showSuccess) {
             Button("OK") {
-                closePaywall()
+                dismiss()
             }
         } message: {
             Text("Your subscription is now active! Thank you for your purchase.")
@@ -433,14 +421,6 @@ struct SubscriptionView: View {
         }
     }
     
-    private func closePaywall() {
-        if let paywallDismiss {
-            paywallDismiss()
-        } else {
-            dismiss()
-        }
-    }
-
     private func purchaseSelectedProduct() {
         Haptics.light()
         guard canSubscribe else {
@@ -510,7 +490,7 @@ struct SubscriptionView: View {
                 // Check if purchase was successful
                 if purchaseManager.hasUnlimitedAccess {
                     isPurchasing = false
-                    closePaywall()
+                    dismiss()
                 } else {
                     // Purchase completed but access not yet granted (might be pending)
                     // The transaction listener will handle this
@@ -539,162 +519,6 @@ struct SubscriptionView: View {
                 }
                 showError = true
             }
-        }
-    }
-}
-
-extension View {
-    /// Presents the paywall as a custom sheet: top corners rounded, bottom edge square so it
-    /// covers the bottom of the display. The system sheet always rounds its bottom corners.
-    func paywallSheet(isPresented: Binding<Bool>) -> some View {
-        modifier(PaywallSheetModifier(isPresented: isPresented))
-    }
-}
-
-extension EnvironmentValues {
-    @Entry var paywallDismiss: (() -> Void)?
-    @Entry var paywallPullDown: PaywallPullDown?
-}
-
-/// Lets the paywall's scroll view drive the custom sheet: pulling down past the top moves
-/// the sheet, and releasing far or fast enough closes it.
-struct PaywallPullDown {
-    var changed: (_ overscroll: CGFloat) -> Void
-    var released: (_ overscroll: CGFloat, _ velocity: CGFloat) -> Void
-}
-
-private struct PaywallSheetModifier: ViewModifier {
-    @Binding var isPresented: Bool
-    @State private var coverPresented = false
-
-    func body(content: Content) -> some View {
-        content
-            .onChange(of: isPresented) { _, newValue in
-                setCover(newValue)
-            }
-            .onChange(of: coverPresented) { _, newValue in
-                if !newValue, isPresented { isPresented = false }
-            }
-            .onAppear {
-                if isPresented { setCover(true) }
-            }
-            .fullScreenCover(isPresented: $coverPresented) {
-                PaywallSheetContainer {
-                    setCover(false)
-                    isPresented = false
-                }
-                .presentationBackground(.clear)
-            }
-    }
-
-    private func setCover(_ value: Bool) {
-        guard coverPresented != value else { return }
-        var transaction = Transaction()
-        transaction.disablesAnimations = true
-        withTransaction(transaction) { coverPresented = value }
-    }
-}
-
-private struct PaywallSheetContainer: View {
-    let onDismissed: () -> Void
-
-    @State private var isShown = false
-    @State private var dragOffset: CGFloat = 0
-    @State private var pullOffset: CGFloat = 0
-    @State private var isClosing = false
-
-    private let cornerRadius: CGFloat = 38
-    private let slideAnimation = Animation.spring(response: 0.42, dampingFraction: 0.92)
-
-    var body: some View {
-        GeometryReader { proxy in
-            let fullHeight = proxy.size.height + proxy.safeAreaInsets.top + proxy.safeAreaInsets.bottom
-            let topGap = proxy.safeAreaInsets.top + 10
-
-            ZStack(alignment: .top) {
-                Color.black
-                    .opacity(isShown ? 0.35 * dimFraction(fullHeight) : 0)
-                    .ignoresSafeArea()
-
-                SubscriptionView()
-                    .environment(\.paywallDismiss, close)
-                    .environment(\.paywallPullDown, pullDown)
-                    .mask(alignment: .top) {
-                        UnevenRoundedRectangle(
-                            topLeadingRadius: cornerRadius,
-                            topTrailingRadius: cornerRadius,
-                            style: .continuous
-                        )
-                        .padding(.bottom, -200)
-                    }
-                    .overlay(alignment: .top) {
-                        dragHandleArea(fullHeight: fullHeight)
-                    }
-                    .padding(.top, topGap)
-                    .offset(y: isShown ? sheetOffset : fullHeight)
-            }
-        }
-        .onAppear {
-            withAnimation(slideAnimation) { isShown = true }
-        }
-    }
-
-    private func dimFraction(_ fullHeight: CGFloat) -> CGFloat {
-        max(0, 1 - sheetOffset / max(fullHeight, 1))
-    }
-
-    private var sheetOffset: CGFloat {
-        dragOffset + pullOffset
-    }
-
-    private var pullDown: PaywallPullDown {
-        PaywallPullDown(
-            changed: { overscroll in
-                guard !isClosing else { return }
-                pullOffset = overscroll
-            },
-            released: { overscroll, velocity in
-                guard !isClosing else { return }
-                // Overscroll is rubber-banded, so a short distance already means a long pull.
-                if overscroll > 60 || (overscroll > 12 && velocity < -900) {
-                    close()
-                }
-            }
-        )
-    }
-
-    /// Drag strip along the top of the sheet; it starts right of the close button so taps reach it.
-    private func dragHandleArea(fullHeight: CGFloat) -> some View {
-        Color.clear
-            .frame(height: 76)
-            .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
-            .padding(.leading, 72)
-            .gesture(
-                DragGesture(minimumDistance: 4)
-                    .onChanged { value in
-                        let y = value.translation.height
-                        dragOffset = y > 0 ? y : y / 8
-                    }
-                    .onEnded { value in
-                        let shouldClose = value.translation.height > 140
-                            || value.predictedEndTranslation.height > 360
-                        if shouldClose {
-                            close()
-                        } else {
-                            withAnimation(slideAnimation) { dragOffset = 0 }
-                        }
-                    }
-            )
-    }
-
-    private func close() {
-        guard !isClosing else { return }
-        isClosing = true
-        withAnimation(.easeIn(duration: 0.25)) {
-            isShown = false
-        } completion: {
-            onDismissed()
         }
     }
 }
