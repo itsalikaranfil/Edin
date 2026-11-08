@@ -168,6 +168,7 @@ struct SubscriptionView: View {
         }
         .environment(\.colorScheme, .dark)
         .presentationBackground(Color.paywallBackground)
+        .background(SquareSheetBottomCorners())
         .alert("Error", isPresented: $showError) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -524,19 +525,55 @@ struct SubscriptionView: View {
 }
 
 extension View {
-    /// Presents the paywall as a sheet. The sheet's rounded bottom corners don't reach the
-    /// display edges, so a dark backdrop is faded in behind them to hide the presenting screen.
     func paywallSheet(isPresented: Binding<Bool>) -> some View {
-        overlay(alignment: .bottom) {
-            Color.paywallBackground
-                .frame(height: 120)
-                .ignoresSafeArea()
-                .opacity(isPresented.wrappedValue ? 1 : 0)
-                .animation(.easeInOut(duration: 0.3), value: isPresented.wrappedValue)
-                .allowsHitTesting(false)
-        }
-        .sheet(isPresented: isPresented) {
+        sheet(isPresented: isPresented) {
             SubscriptionView()
+        }
+    }
+}
+
+/// Keeps the hosting sheet's top corners rounded but squares its bottom corners so the
+/// sheet reaches the display edges. UIKit re-applies corner masks during presentation and
+/// rotation, so they're reapplied on every layout pass.
+private struct SquareSheetBottomCorners: UIViewRepresentable {
+    func makeUIView(context: Context) -> CornerMaskingView {
+        CornerMaskingView()
+    }
+
+    func updateUIView(_ uiView: CornerMaskingView, context: Context) {
+        uiView.applyMask()
+    }
+
+    final class CornerMaskingView: UIView {
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+            isUserInteractionEnabled = false
+            backgroundColor = .clear
+        }
+
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            applyMask()
+        }
+
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            applyMask()
+            DispatchQueue.main.async { [weak self] in self?.applyMask() }
+        }
+
+        func applyMask() {
+            var view = superview
+            while let current = view, !(current is UIWindow) {
+                if current.layer.cornerRadius > 0 {
+                    current.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+                }
+                view = current.superview
+            }
         }
     }
 }
