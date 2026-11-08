@@ -141,7 +141,8 @@ extension Product {
         guard yearlyIfMonthly > 0, yearlyIfMonthly > price else { return nil }
         let saved = yearlyIfMonthly - price
         let percent = (saved / yearlyIfMonthly) * Decimal(100)
-        let rounded = NSDecimalNumber(decimal: percent).intValue
+        // NSDecimalNumber.intValue returns garbage for long repeating decimals (e.g. 16.666…).
+        let rounded = Int(NSDecimalNumber(decimal: percent).doubleValue.rounded(.down))
         return rounded > 0 ? rounded : nil
     }
 
