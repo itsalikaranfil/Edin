@@ -244,7 +244,7 @@ struct SettingsView: View {
                 .padding(.vertical)
             }
             .background(Color.screenBackground)
-            .sheet(isPresented: $showSubscription) {
+            .fullScreenCover(isPresented: $showSubscription) {
                 SubscriptionView()
             }
             .manageSubscriptionsSheet(isPresented: $showManageSubscriptions)

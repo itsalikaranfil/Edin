@@ -592,7 +592,7 @@ struct RemindersView: View {
                 .presentationBackground(Color.sheetSurface)
         }
         .sheet(isPresented: $showNewItem) { NewItemView() }
-        .sheet(isPresented: $showSubscription) { SubscriptionView() }
+        .fullScreenCover(isPresented: $showSubscription) { SubscriptionView() }
         .sheet(item: $selectedReminder) { reminder in ItemInfoView(item: .reminder(reminder)) }
         .sheet(item: $selectedEvent) { event in ItemInfoView(item: .event(event)) }
         .sheet(item: $selectedHabit) { habit in
