@@ -163,7 +163,7 @@ struct ContentView: View {
             )
             .environment(\.managedObjectContext, viewContext)
         }
-        .fullScreenCover(isPresented: $showSubscription) {
+        .sheet(isPresented: $showSubscription) {
             SubscriptionView()
         }
         .onOpenURL { url in

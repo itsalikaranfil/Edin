@@ -132,9 +132,6 @@ struct SubscriptionView: View {
             Color.paywallBackground
                 .ignoresSafeArea()
 
-            PaywallGlow()
-                .ignoresSafeArea(edges: .top)
-
             ScrollView {
                 VStack(spacing: 28) {
                     heroSection
@@ -170,6 +167,7 @@ struct SubscriptionView: View {
             .padding(.top, 16)
         }
         .environment(\.colorScheme, .dark)
+        .presentationBackground(Color.paywallBackground)
         .alert("Error", isPresented: $showError) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -227,6 +225,11 @@ struct SubscriptionView: View {
                 .padding(.horizontal, 24)
         }
         .frame(maxWidth: .infinity)
+        .background(alignment: .top) {
+            PaywallGlow()
+                .padding(.horizontal, -20)
+                .offset(y: -44)
+        }
     }
 
     private var benefitsSection: some View {
