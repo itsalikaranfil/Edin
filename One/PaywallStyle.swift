@@ -377,5 +377,4 @@ struct SettingsPremiumCard: View {
         )
         .environment(\.colorScheme, .dark)
     }
-
 }
