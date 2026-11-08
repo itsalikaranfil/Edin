@@ -31,7 +31,7 @@ extension Color {
         dark: UIColor(red: 20 / 255, green: 20 / 255, blue: 20 / 255, alpha: 1)
     )
 
-    /// Calendar tab sheet surface, a step apart from the screen behind it.
+    /// Calendar tab sheets, the calendar Folders/Alarms bars, and Upcoming item sections.
     static let calendarSheetSurface = dynamic(
         light: UIColor(white: 0.975, alpha: 1),
         dark: UIColor(red: 0x1C / 255, green: 0x1C / 255, blue: 0x1E / 255, alpha: 1)
