@@ -34,7 +34,7 @@ extension Color {
     /// Calendar day sheet surface, a step apart from the screen behind it.
     static let calendarSheetSurface = dynamic(
         light: UIColor(white: 0.975, alpha: 1),
-        dark: UIColor(red: 28 / 255, green: 27 / 255, blue: 29 / 255, alpha: 1)
+        dark: UIColor(red: 0x24 / 255, green: 0x24 / 255, blue: 0x27 / 255, alpha: 1)
     )
 
     /// Hairline top edge highlight on the calendar day sheet.
