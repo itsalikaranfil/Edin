@@ -79,7 +79,7 @@ struct CalendarDaySheet<Header: View, Content: View>: View {
                 .frame(height: drag.isInteracting ? totalHeight : metrics.sheetHeight(dragOffset: 0))
                 .frame(maxWidth: .infinity)
                 .calendarSheetBackground()
-                .modifier(SheetDragOffset(drag: drag, metrics: metrics))
+                .modifier(SheetDragOffset(drag: drag, containerHeight: totalHeight, sheetHeight: metrics.sheetHeight(dragOffset:)))
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         }
@@ -103,16 +103,7 @@ struct CalendarDaySheet<Header: View, Content: View>: View {
         DragGesture(minimumDistance: 6, coordinateSpace: .global)
             .updating($isGestureActive) { _, active, _ in active = true }
             .onChanged { value in
-                var transaction = Transaction()
-                transaction.disablesAnimations = true
-                withTransaction(transaction) {
-                    if !drag.isDragging {
-                        drag.isDragging = true
-                        drag.isInteracting = true
-                        drag.settleID += 1
-                    }
-                    drag.offset = value.translation.height
-                }
+                drag.track(value.translation.height)
             }
             .onEnded { value in
                 let velocity = value.velocity.height
@@ -132,46 +123,60 @@ struct CalendarDaySheet<Header: View, Content: View>: View {
     }
 
     private func settle(to target: SheetDetent) {
-        drag.isDragging = false
-        let settleID = drag.settleID
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.9)) {
+        drag.settle {
             detent = target
-            drag.offset = 0
-        } completion: {
-            guard drag.settleID == settleID, !drag.isDragging else { return }
-            var transaction = Transaction()
-            transaction.disablesAnimations = true
-            withTransaction(transaction) {
-                drag.isInteracting = false
-            }
         }
     }
 }
 
+/// Drag state shared by the calendar tab's bottom sheets. While `isInteracting`, a sheet is laid out
+/// at full container height and only offset per frame (see `SheetDragOffset`); resizing it every
+/// frame re-lays out its list and stutters.
 @Observable
-private final class SheetDragState {
+final class SheetDragState {
     var offset: CGFloat = 0
-    var isDragging = false
+    private(set) var isDragging = false
     /// True from drag start until the settle animation finishes.
-    var isInteracting = false
-    var settleID = 0
-}
+    private(set) var isInteracting = false
+    private var settleID = 0
 
-private struct SheetDragMetrics {
-    let baseHeight: CGFloat
-    let midHeight: CGFloat
-    let fullHeight: CGFloat
-    let coverExtraHeight: CGFloat
-    let totalHeight: CGFloat
-
-    func sheetHeight(dragOffset: CGFloat) -> CGFloat {
-        let height = Self.rubberBanded(baseHeight - dragOffset, min: midHeight, max: fullHeight)
-        // coverExtraHeight can be negative to drop the sheet below mid (reveal FoldersBar).
-        return min(max(height + coverExtraHeight, midHeight * 0.45), totalHeight)
+    func track(_ translation: CGFloat) {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            if !isDragging {
+                isDragging = true
+                isInteracting = true
+                settleID += 1
+            }
+            offset = translation
+        }
     }
 
-    /// Lets the sheet stretch a little past its detents with resistance instead of stopping dead.
-    private static func rubberBanded(_ height: CGFloat, min lower: CGFloat, max upper: CGFloat) -> CGFloat {
+    /// Ends a drag whose sheet is being dismissed, leaving it where the finger released it.
+    func release() {
+        isDragging = false
+    }
+
+    /// Animates `changes` together with the offset returning to zero, then drops back to normal layout.
+    func settle(_ changes: () -> Void) {
+        isDragging = false
+        let id = settleID
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.9)) {
+            changes()
+            offset = 0
+        } completion: { [weak self] in
+            guard let self, self.settleID == id, !self.isDragging else { return }
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
+                self.isInteracting = false
+            }
+        }
+    }
+
+    /// Lets a sheet stretch a little past a detent with resistance instead of stopping dead.
+    static func rubberBanded(_ height: CGFloat, min lower: CGFloat, max upper: CGFloat) -> CGFloat {
         let limit: CGFloat = 50
         func resist(_ overshoot: CGFloat) -> CGFloat {
             limit * (1 - 1 / (overshoot / limit * 0.55 + 1))
@@ -182,14 +187,29 @@ private struct SheetDragMetrics {
     }
 }
 
+private struct SheetDragMetrics {
+    let baseHeight: CGFloat
+    let midHeight: CGFloat
+    let fullHeight: CGFloat
+    let coverExtraHeight: CGFloat
+    let totalHeight: CGFloat
+
+    func sheetHeight(dragOffset: CGFloat) -> CGFloat {
+        let height = SheetDragState.rubberBanded(baseHeight - dragOffset, min: midHeight, max: fullHeight)
+        // coverExtraHeight can be negative to drop the sheet below mid (reveal FoldersBar).
+        return min(max(height + coverExtraHeight, midHeight * 0.45), totalHeight)
+    }
+}
+
 /// Reads the drag offset here rather than in the sheet body, so per-frame drag updates
-/// don't re-evaluate the sheet's header and list.
-private struct SheetDragOffset: ViewModifier {
+/// don't re-evaluate the sheet's content.
+struct SheetDragOffset: ViewModifier {
     let drag: SheetDragState
-    let metrics: SheetDragMetrics
+    let containerHeight: CGFloat
+    let sheetHeight: (_ dragOffset: CGFloat) -> CGFloat
 
     func body(content: Content) -> some View {
-        content.offset(y: drag.isInteracting ? metrics.totalHeight - metrics.sheetHeight(dragOffset: drag.offset) : 0)
+        content.offset(y: drag.isInteracting ? containerHeight - sheetHeight(drag.offset) : 0)
     }
 }
 
