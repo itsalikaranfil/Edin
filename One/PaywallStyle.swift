@@ -26,8 +26,10 @@ struct PaywallGlow: View {
                 .offset(y: -height * 0.32)
 
             HStack(spacing: 0) {
-                Spacer(minLength: 0)
                 ForEach(streakWidths.indices, id: \.self) { index in
+                    if index > 0 {
+                        Spacer(minLength: 0)
+                    }
                     Rectangle()
                         .fill(
                             LinearGradient(
@@ -37,10 +39,9 @@ struct PaywallGlow: View {
                             )
                         )
                         .frame(width: streakWidths[index])
-                    Spacer(minLength: 0)
                 }
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, 14)
             .blur(radius: 4)
             .frame(height: height * 0.85, alignment: .top)
         }
@@ -130,10 +131,9 @@ struct PaywallBenefitRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: icon)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: 22, weight: .semibold))
                 .foregroundStyle(.white)
-                .frame(width: 34, height: 34)
-                .background(Circle().fill(Color.white.opacity(0.07)))
+                .frame(width: 32, height: 32)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(LocalizedStringKey(title))
