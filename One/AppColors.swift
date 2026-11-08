@@ -34,13 +34,13 @@ extension Color {
     /// Calendar day sheet surface, a step apart from the screen behind it.
     static let calendarSheetSurface = dynamic(
         light: UIColor(white: 0.975, alpha: 1),
-        dark: UIColor(white: 0.12, alpha: 1)
+        dark: UIColor(red: 28 / 255, green: 27 / 255, blue: 29 / 255, alpha: 1)
     )
 
     /// Hairline top edge highlight on the calendar day sheet.
     static let calendarSheetEdge = dynamic(
         light: UIColor(white: 0, alpha: 0.08),
-        dark: UIColor(white: 1, alpha: 0.12)
+        dark: UIColor(white: 1, alpha: 0.06)
     )
 
     /// Filter pill background.
