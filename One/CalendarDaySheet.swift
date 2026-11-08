@@ -80,7 +80,22 @@ struct CalendarDaySheet<Header: View, Content: View>: View {
                 .frame(height: drag.isInteracting ? totalHeight : metrics.sheetHeight(dragOffset: 0))
                 .frame(maxWidth: .infinity)
                 .clipShape(shape)
-                .glassEffect(.regular.tint(Color.calendarSheetGlassTint), in: shape)
+                // Solid instead of Liquid Glass: real glass on device blends what's behind it
+                // and renders differently from the Simulator.
+                .background(Color.calendarSheetSurface, in: shape)
+                .overlay {
+                    shape
+                        .stroke(
+                            LinearGradient(
+                                colors: [Color.calendarSheetEdge, .clear],
+                                startPoint: .top,
+                                endPoint: .init(x: 0.5, y: 0.08)
+                            ),
+                            lineWidth: 2
+                        )
+                        .clipShape(shape)
+                        .allowsHitTesting(false)
+                }
                 .modifier(SheetDragOffset(drag: drag, metrics: metrics))
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)

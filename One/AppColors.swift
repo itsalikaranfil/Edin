@@ -31,10 +31,16 @@ extension Color {
         dark: UIColor(red: 20 / 255, green: 20 / 255, blue: 20 / 255, alpha: 1)
     )
 
-    /// Liquid Glass tint for the calendar day sheet, so it separates from the screen behind it.
-    static let calendarSheetGlassTint = dynamic(
-        light: UIColor(white: 0.94, alpha: 0.55),
-        dark: UIColor(white: 0.14, alpha: 0.65)
+    /// Calendar day sheet surface, a step apart from the screen behind it.
+    static let calendarSheetSurface = dynamic(
+        light: UIColor(white: 0.975, alpha: 1),
+        dark: UIColor(white: 0.12, alpha: 1)
+    )
+
+    /// Hairline top edge highlight on the calendar day sheet.
+    static let calendarSheetEdge = dynamic(
+        light: UIColor(white: 0, alpha: 0.08),
+        dark: UIColor(white: 1, alpha: 0.12)
     )
 
     /// Filter pill background.
