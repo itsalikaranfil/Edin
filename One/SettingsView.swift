@@ -40,17 +40,7 @@ struct SettingsView: View {
         if let plan = purchaseManager.activeSubscriptionPlan {
             return .active(plan: plan)
         }
-        return .upgrade(
-            eligibleForTrial: purchaseManager.isEligibleForFreeTrial,
-            annualSavingsPercent: annualSavingsPercent
-        )
-    }
-
-    private var annualSavingsPercent: Int? {
-        guard let annual = purchaseManager.products.first(where: { $0.id == ProductID.annual.rawValue }),
-              let monthly = purchaseManager.products.first(where: { $0.id == ProductID.monthly.rawValue })
-        else { return nil }
-        return annual.oneAnnualSavingsPercent(comparedTo: monthly)
+        return .upgrade(eligibleForTrial: purchaseManager.isEligibleForFreeTrial)
     }
     
     var body: some View {
