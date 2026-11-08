@@ -420,6 +420,7 @@ struct CalendarView: View {
                         Text(monthYearString)
                             .font(.system(size: 28, weight: .bold))
                             .foregroundColor(Color.primaryText)
+                            .contentTransition(.numericText(countsDown: monthSlideDirection < 0))
                     }
 
                     Spacer()
@@ -457,48 +458,49 @@ struct CalendarView: View {
                 // Calendar grid. Eager rows: a lazy grid builds its cells mid-transition and stutters.
                 let gridDays = showsWeekOnly ? daysInAnchorWeek : daysInMonth
                 let markers = dayMarkers(for: gridDays)
-                VStack(spacing: 6) {
-                    ForEach(Array(stride(from: 0, to: gridDays.count, by: 7)), id: \.self) { rowStart in
-                        HStack(spacing: 8) {
-                            ForEach(gridDays[rowStart..<min(rowStart + 7, gridDays.count)], id: \.self) { date in
-                                let dayStart = calendar.startOfDay(for: date)
-                                DayCellView(
-                                    date: date,
-                                    isToday: calendar.isDateInToday(date),
-                                    isCurrentMonth: calendar.isDate(date, equalTo: currentMonth, toGranularity: .month),
-                                    hasItems: markers.withItems.contains(dayStart),
-                                    hasOverdueItems: markers.overdue.contains(dayStart),
-                                    selectedDate: selectedDay,
-                                    onTap: {
-                                        Haptics.selection()
-                                        selectedDay = date
-                                        if showsWeekOnly {
-                                            // Keep the anchor week stable when tapping an adjacent-month day.
-                                            currentMonth = date
+                // Only the grid slides, clipped to its own area, so the title never lingers over it.
+                ZStack {
+                    VStack(spacing: 6) {
+                        ForEach(Array(stride(from: 0, to: gridDays.count, by: 7)), id: \.self) { rowStart in
+                            HStack(spacing: 8) {
+                                ForEach(gridDays[rowStart..<min(rowStart + 7, gridDays.count)], id: \.self) { date in
+                                    let dayStart = calendar.startOfDay(for: date)
+                                    DayCellView(
+                                        date: date,
+                                        isToday: calendar.isDateInToday(date),
+                                        isCurrentMonth: calendar.isDate(date, equalTo: currentMonth, toGranularity: .month),
+                                        hasItems: markers.withItems.contains(dayStart),
+                                        hasOverdueItems: markers.overdue.contains(dayStart),
+                                        selectedDate: selectedDay,
+                                        onTap: {
+                                            Haptics.selection()
+                                            selectedDay = date
+                                            if showsWeekOnly {
+                                                // Keep the anchor week stable when tapping an adjacent-month day.
+                                                currentMonth = date
+                                            }
+                                            selectedDayManager.selectedDay = date
                                         }
-                                        selectedDayManager.selectedDay = date
-                                    }
-                                )
+                                    )
+                                }
                             }
                         }
                     }
+                    .padding(.horizontal)
+                    .animation(nil, value: currentMonth)
+                    .background(
+                        GeometryReader { proxy in
+                            Color.clear.preference(
+                                key: CalendarGridTopKey.self,
+                                value: proxy.frame(in: .named("calendarContainer")).minY
+                            )
+                        }
+                    )
+                    .id(showsWeekOnly ? anchorWeekStart : monthIdentity)
+                    .transition(calendarGridTransition)
                 }
-                .padding(.horizontal)
-                .animation(nil, value: currentMonth)
-                .background(
-                    GeometryReader { proxy in
-                        Color.clear.preference(
-                            key: CalendarGridTopKey.self,
-                            value: proxy.frame(in: .named("calendarContainer")).minY
-                        )
-                    }
-                )
-                // Week mode slides only the week row; the header and weekday labels stay put.
-                .id(showsWeekOnly ? AnyHashable(anchorWeekStart) : AnyHashable("month"))
-                .transition(calendarGridTransition)
+                .clipped()
             }
-            .id(showsWeekOnly ? AnyHashable("week") : AnyHashable(monthIdentity))
-            .transition(calendarGridTransition)
         }
         .clipped()
         .padding(.vertical, 12)
