@@ -66,6 +66,7 @@ struct CalendarDaySheet<Header: View, Content: View>: View {
                             .frame(maxWidth: .infinity)
 
                         header()
+                            .environment(\.glassPillsInteractive, false)
                     }
                     .contentShape(Rectangle())
                     // Simultaneous so the filter pills in the header stay tappable.
