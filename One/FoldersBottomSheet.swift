@@ -34,8 +34,7 @@ struct FoldersBottomSheet<Content: View>: View {
         }
         .frame(height: currentHeight)
         .frame(maxWidth: .infinity)
-        .background(Color.sheetSurface)
-        .clipShape(RoundedCorner(radius: 20, corners: [.topLeft, .topRight]))
+        .calendarSheetBackground()
         .ignoresSafeArea(.container, edges: .bottom)
     }
 

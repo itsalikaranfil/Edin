@@ -54,7 +54,6 @@ struct CalendarDaySheet<Header: View, Content: View>: View {
                 coverExtraHeight: coverExtraHeight,
                 totalHeight: totalHeight
             )
-            let shape = UnevenRoundedRectangle(topLeadingRadius: 24, topTrailingRadius: 24, style: .continuous)
 
             VStack(spacing: 0) {
                 Spacer(minLength: 0)
@@ -79,23 +78,7 @@ struct CalendarDaySheet<Header: View, Content: View>: View {
                 // offset per frame; resizing it every frame re-lays out the list and stutters.
                 .frame(height: drag.isInteracting ? totalHeight : metrics.sheetHeight(dragOffset: 0))
                 .frame(maxWidth: .infinity)
-                .clipShape(shape)
-                // Solid instead of Liquid Glass: real glass on device blends what's behind it
-                // and renders differently from the Simulator.
-                .background(Color.calendarSheetSurface, in: shape)
-                .overlay {
-                    shape
-                        .stroke(
-                            LinearGradient(
-                                colors: [Color.calendarSheetEdge, .clear],
-                                startPoint: .top,
-                                endPoint: .init(x: 0.5, y: 0.08)
-                            ),
-                            lineWidth: 2
-                        )
-                        .clipShape(shape)
-                        .allowsHitTesting(false)
-                }
+                .calendarSheetBackground()
                 .modifier(SheetDragOffset(drag: drag, metrics: metrics))
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
@@ -207,6 +190,30 @@ private struct SheetDragOffset: ViewModifier {
 
     func body(content: Content) -> some View {
         content.offset(y: drag.isInteracting ? metrics.totalHeight - metrics.sheetHeight(dragOffset: drag.offset) : 0)
+    }
+}
+
+extension View {
+    /// Shared surface for the calendar tab's bottom sheets (day, folders, alarms).
+    /// Solid instead of Liquid Glass: real glass on device blends what's behind it
+    /// and renders differently from the Simulator.
+    func calendarSheetBackground() -> some View {
+        let shape = UnevenRoundedRectangle(topLeadingRadius: 24, topTrailingRadius: 24, style: .continuous)
+        return clipShape(shape)
+            .background(Color.calendarSheetSurface, in: shape)
+            .overlay {
+                shape
+                    .stroke(
+                        LinearGradient(
+                            colors: [Color.calendarSheetEdge, .clear],
+                            startPoint: .top,
+                            endPoint: .init(x: 0.5, y: 0.08)
+                        ),
+                        lineWidth: 2
+                    )
+                    .clipShape(shape)
+                    .allowsHitTesting(false)
+            }
     }
 }
 
