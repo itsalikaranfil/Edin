@@ -77,7 +77,16 @@ struct SubscriptionView: View {
         if let plan = purchaseManager.activeSubscriptionPlan {
             return String(localized: "You are subscribed to \(plan.shortName)")
         }
-        return String(localized: "Plan your days without limits.")
+        return String(localized: "Unlock the full Edin experience, all in one place.")
+    }
+
+    private var headlineTitle: String {
+        if !isManaging, !purchaseManager.hasLifetimePurchase,
+           let annual = annualProduct, let monthly = monthlyProduct,
+           let months = annual.oneAnnualPriceInMonths(comparedTo: monthly) {
+            return String(localized: "Get 12 months for the price of \(months)")
+        }
+        return String(localized: "Plan your days without limits")
     }
     
     private var primaryButtonTitle: String {
@@ -86,7 +95,7 @@ struct SubscriptionView: View {
             return String(localized: "Start My Free Trial")
         }
         if isManaging { return String(localized: "Upgrade") }
-        return String(localized: "Get Edin+")
+        return String(localized: "Continue")
     }
 
     private var ctaCaption: String? {
@@ -120,13 +129,13 @@ struct SubscriptionView: View {
     
     var body: some View {
         ZStack(alignment: .topLeading) {
-            Color.screenBackground
+            Color.paywallBackground
                 .ignoresSafeArea()
 
             ScrollView {
                 VStack(spacing: 28) {
-                    PaywallHero(tagline: taglineText)
-                        .padding(.top, 52)
+                    heroSection
+                        .padding(.top, 44)
 
                     if purchaseManager.hasLifetimePurchase {
                         Text("You already own Edin+ Lifetime. No further purchase is needed.")
@@ -157,7 +166,8 @@ struct SubscriptionView: View {
             .padding(.leading, 20)
             .padding(.top, 16)
         }
-        .presentationBackground(Color.screenBackground)
+        .environment(\.colorScheme, .dark)
+        .presentationBackground(Color.paywallBackground)
         .alert("Error", isPresented: $showError) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -194,8 +204,33 @@ struct SubscriptionView: View {
 
     // MARK: - Sections
 
+    private var heroSection: some View {
+        VStack(spacing: 10) {
+            PaywallHeadline(savingsPercent: isManaging ? nil : annualSavingsPercent)
+                .padding(.bottom, 4)
+
+            Text(headlineTitle)
+                .font(.system(size: 21, weight: .semibold))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+
+            Text(taglineText)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(.white.opacity(0.55))
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 24)
+        }
+        .frame(maxWidth: .infinity)
+        .background(alignment: .top) {
+            PaywallGlow()
+                .padding(.horizontal, -20)
+                .offset(y: -44)
+        }
+    }
+
     private var benefitsSection: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 18) {
             PaywallBenefitRow(
                 icon: "infinity",
                 title: "Unlimited everything",
@@ -217,29 +252,21 @@ struct SubscriptionView: View {
                 subtitle: "Your plans stay in sync across devices."
             )
         }
-        .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(Color.appBackground)
-        )
+        .padding(.horizontal, 4)
     }
 
     private var plansSection: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 4) {
             if purchaseManager.isLoading && orderedProducts.isEmpty {
                 ProgressView()
                     .padding()
             } else if !orderedProducts.isEmpty {
                 // Annual first: it is the default pick and carries the savings and trial.
                 ForEach(orderedProducts.reversed(), id: \.id) { product in
-                    let isAnnual = product.id == ProductID.annual.rawValue
                     PaywallPlanOption(
                         product: product,
                         isSelected: selectedProduct?.id == product.id,
                         isCurrent: product.id == currentPlanID,
-                        showTrialBadge: purchaseManager.isEligibleForFreeTrial
-                            && product.oneFreeTrialOffer != nil,
-                        savingsPercent: isAnnual ? annualSavingsPercent : nil,
                         onTap: {
                             selectedProduct = product
                             selectedProductID = product.id
@@ -261,10 +288,10 @@ struct SubscriptionView: View {
                         Text("Tap to retry")
                             .font(.subheadline)
                             .fontWeight(.semibold)
-                            .foregroundStyle(Color.screenBackground)
+                            .foregroundStyle(.white)
                             .padding(.horizontal, 18)
                             .padding(.vertical, 10)
-                            .background(Capsule().fill(Color.primaryText))
+                            .background(Capsule().fill(Color.white.opacity(0.12)))
                     }
                     .buttonStyle(PaywallPressStyle())
                 }
@@ -288,7 +315,7 @@ struct SubscriptionView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "checkmark.shield.fill")
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Color.primaryText)
+                        .foregroundStyle(Color.premiumRedBright)
                     Text(ctaCaption)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
@@ -321,7 +348,7 @@ struct SubscriptionView: View {
         .padding(.bottom, 8)
         .background {
             LinearGradient(
-                colors: [Color.screenBackground.opacity(0), Color.screenBackground],
+                colors: [Color.paywallBackground.opacity(0), Color.paywallBackground],
                 startPoint: .top,
                 endPoint: .init(x: 0.5, y: 0.3)
             )
@@ -354,7 +381,7 @@ struct SubscriptionView: View {
             }
             .font(.caption)
             .fontWeight(.medium)
-            .tint(Color.primaryText)
+            .tint(.white)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, 4)

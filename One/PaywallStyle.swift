@@ -8,48 +8,104 @@
 import SwiftUI
 import StoreKit
 
-// MARK: - Hero
+// MARK: - Glow
 
-/// Logo, title, and tagline. A soft spotlight lifts the logo off the page in both appearances.
-struct PaywallHero: View {
-    let tagline: String
+/// Red light falling from the top edge: a soft bloom plus faint vertical streaks.
+struct PaywallGlow: View {
+    var height: CGFloat = 360
+    var intensity: Double = 1
 
-    private let logoSize: CGFloat = 96
+    private let streakWidths: [CGFloat] = [8, 3, 16, 5, 11, 3, 20, 7, 4, 14, 6, 10, 3]
 
     var body: some View {
-        VStack(spacing: 16) {
-            Image("logoOne")
-                .resizable()
-                .scaledToFill()
-                .frame(width: logoSize, height: logoSize)
-                .clipShape(RoundedRectangle(cornerRadius: logoSize * 0.225, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: logoSize * 0.225, style: .continuous)
-                        .strokeBorder(Color.primaryText.opacity(0.08), lineWidth: 1)
-                )
-                .shadow(color: .black.opacity(0.22), radius: 24, x: 0, y: 14)
-                .background(
-                    Circle()
-                        .fill(Color.primaryText.opacity(0.06))
-                        .frame(width: logoSize * 2.2, height: logoSize * 2.2)
-                        .blur(radius: 30)
-                )
-                .accessibilityHidden(true)
+        ZStack(alignment: .top) {
+            Ellipse()
+                .fill(Color.premiumRed.opacity(0.5 * intensity))
+                .frame(width: height * 1.3, height: height * 0.75)
+                .blur(radius: height * 0.2)
+                .offset(y: -height * 0.32)
 
-            VStack(spacing: 8) {
-                Text("Edin+")
-                    .font(.system(size: 40, weight: .bold))
-                    .tracking(-0.5)
-                    .foregroundStyle(Color.primaryText)
-
-                Text(tagline)
-                    .font(.title3)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 18) {
+                ForEach(streakWidths.indices, id: \.self) { index in
+                    Rectangle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.premiumRedBright.opacity((index.isMultiple(of: 2) ? 0.2 : 0.1) * intensity),
+                                    .clear
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .frame(width: streakWidths[index])
+                }
             }
+            .blur(radius: 3)
+            .frame(height: height * 0.85, alignment: .top)
         }
         .frame(maxWidth: .infinity)
+        .frame(height: height, alignment: .top)
+        .clipped()
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+// MARK: - Headline
+
+/// Heavy rounded text with a deep red outline and a red glow.
+struct PaywallGlowText: View {
+    let text: String
+    let size: CGFloat
+
+    var body: some View {
+        let outline = max(size * 0.035, 1.5)
+        let label = Text(verbatim: text)
+            .font(.system(size: size, weight: .black, design: .rounded))
+
+        ZStack {
+            // Eight offset copies draw the outline; SwiftUI has no text stroke.
+            ForEach(0..<8, id: \.self) { index in
+                let angle = Double(index) / 8 * 2 * .pi
+                label
+                    .foregroundStyle(Color.premiumRedDeep)
+                    .offset(x: cos(angle) * outline, y: sin(angle) * outline)
+            }
+            label
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [Color.premiumRedBright, Color.premiumRed],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+        }
+        .compositingGroup()
+        .shadow(color: Color.premiumRed.opacity(0.6), radius: size * 0.2)
+    }
+}
+
+/// Big savings figure ("30%"), or the Edin+ wordmark when there is no saving to show.
+struct PaywallHeadline: View {
+    let savingsPercent: Int?
+
+    var body: some View {
+        Group {
+            if let savingsPercent {
+                HStack(alignment: .firstTextBaseline, spacing: 2) {
+                    PaywallGlowText(text: "\(savingsPercent)", size: 104)
+                    PaywallGlowText(text: "%", size: 54)
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Text("Save \(savingsPercent)%"))
+            } else {
+                PaywallGlowText(text: "Edin+", size: 72)
+                    .accessibilityLabel(Text(verbatim: "Edin+"))
+            }
+        }
+        .lineLimit(1)
+        .minimumScaleFactor(0.6)
     }
 }
 
@@ -61,20 +117,20 @@ struct PaywallBenefitRow: View {
     let subtitle: String
 
     var body: some View {
-        HStack(alignment: .center, spacing: 14) {
+        HStack(alignment: .top, spacing: 14) {
             Image(systemName: icon)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Color.primaryText)
-                .frame(width: 36, height: 36)
-                .background(Circle().fill(Color.pillBackground))
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color.premiumRedBright)
+                .frame(width: 34, height: 34)
+                .background(Circle().fill(Color.white.opacity(0.07)))
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(LocalizedStringKey(title))
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.primaryText)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
                 Text(LocalizedStringKey(subtitle))
                     .font(.system(size: 13))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.5))
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -86,35 +142,26 @@ struct PaywallBenefitRow: View {
 // MARK: - Badges
 
 struct PaywallBadge: View {
-    enum Style {
-        case solid
-        case subtle
-    }
-
     let text: String
-    var style: Style = .solid
 
     var body: some View {
         Text(text)
             .font(.system(size: 10, weight: .bold))
             .tracking(0.6)
-            .foregroundStyle(style == .solid ? Color.screenBackground : Color.primaryText)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(
-                Capsule().fill(style == .solid ? Color.primaryText : Color.pillBackground)
-            )
+            .foregroundStyle(.white)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(Capsule().fill(Color.white.opacity(0.14)))
     }
 }
 
 // MARK: - Plans
 
+/// Selected plan sits on a raised card; the others are plain rows.
 struct PaywallPlanOption: View {
     let product: Product
     let isSelected: Bool
     var isCurrent: Bool = false
-    var showTrialBadge: Bool = false
-    var savingsPercent: Int? = nil
     let onTap: () -> Void
 
     private var title: String {
@@ -126,88 +173,56 @@ struct PaywallPlanOption: View {
             Haptics.selection()
             onTap()
         } label: {
-            HStack(alignment: .center, spacing: 14) {
-                selectionIndicator
-
+            HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
                         Text(title)
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundStyle(Color.primaryText)
+                            .font(.system(size: isSelected ? 19 : 17, weight: .semibold))
+                            .foregroundStyle(.white)
                             .lineLimit(1)
 
-                        if let savingsPercent {
-                            PaywallBadge(text: String(localized: "SAVE \(savingsPercent)%"))
-                        }
-
                         if isCurrent {
-                            PaywallBadge(text: String(localized: "CURRENT"), style: .subtle)
+                            PaywallBadge(text: String(localized: "CURRENT"))
                         }
                     }
 
-                    Text(product.oneBillingSummary)
-                        .font(.system(size: 13))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    if showTrialBadge, let trial = product.oneTrialDurationText {
-                        Text("\(trial) free, then auto-renews")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(Color.primaryText)
+                    if isSelected {
+                        Text(product.onePlanBillingDetail)
+                            .font(.system(size: 13))
+                            .foregroundStyle(.white.opacity(0.5))
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
 
                 Spacer(minLength: 8)
 
-                VStack(alignment: .trailing, spacing: 1) {
-                    Text(product.displayPrice)
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundStyle(Color.primaryText)
-                    Text("/\(product.oneShortPeriodLabel)")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
+                Text(product.onePlanPriceLabel)
+                    .font(.system(size: isSelected ? 20 : 17, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 16)
+            .padding(.horizontal, 18)
+            .padding(.vertical, isSelected ? 18 : 14)
             .background(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(Color.appBackground)
+                    .fill(Color.white.opacity(isSelected ? 0.07 : 0))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .strokeBorder(
-                        isSelected ? Color.primaryText : Color.primaryText.opacity(0.08),
-                        lineWidth: isSelected ? 2 : 1
-                    )
+                    .strokeBorder(Color.white.opacity(isSelected ? 0.06 : 0), lineWidth: 1)
             )
             .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         }
         .buttonStyle(PaywallPressStyle())
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isSelected)
+        .animation(.spring(response: 0.3, dampingFraction: 0.85), value: isSelected)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
-    }
-
-    private var selectionIndicator: some View {
-        ZStack {
-            Circle()
-                .strokeBorder(Color.primaryText.opacity(isSelected ? 0 : 0.25), lineWidth: 1.5)
-            if isSelected {
-                Circle()
-                    .fill(Color.primaryText)
-                Image(systemName: "checkmark")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Color.screenBackground)
-            }
-        }
-        .frame(width: 24, height: 24)
     }
 }
 
 // MARK: - CTA
 
-/// Solid, inverted capsule (black in Light, white in Dark).
 struct PaywallCTAButton: View {
     let title: String
     var isEnabled: Bool = true
@@ -219,21 +234,22 @@ struct PaywallCTAButton: View {
             HStack(spacing: 8) {
                 if isLoading {
                     ProgressView()
-                        .tint(Color.screenBackground)
+                        .tint(.white)
                         .scaleEffect(0.85)
                 }
                 Text(title)
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.system(size: 18, weight: .semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
-            .foregroundStyle(isEnabled ? Color.screenBackground : Color.primaryText.opacity(0.4))
+            .foregroundStyle(.white.opacity(isEnabled ? 1 : 0.45))
             .frame(maxWidth: .infinity)
             .frame(height: 56)
             .background(
-                Capsule().fill(isEnabled ? Color.primaryText : Color.pillBackground)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(isEnabled ? Color.premiumRed : Color.white.opacity(0.1))
             )
-            .shadow(color: .black.opacity(isEnabled ? 0.18 : 0), radius: 14, x: 0, y: 6)
+            .shadow(color: Color.premiumRed.opacity(isEnabled ? 0.35 : 0), radius: 16, x: 0, y: 6)
         }
         .buttonStyle(PaywallPressStyle())
         .disabled(!isEnabled)
@@ -256,6 +272,7 @@ enum SettingsPremiumCardState {
     case active(plan: ProductID)
 }
 
+/// Dark card with the paywall's red glow, so Settings previews the paywall.
 struct SettingsPremiumCard: View {
     let state: SettingsPremiumCardState
     let onUpgrade: () -> Void
@@ -271,65 +288,61 @@ struct SettingsPremiumCard: View {
                         .tint(.white)
                     Spacer()
                 }
-                .frame(height: 96)
+                .frame(height: 120)
 
             case .upgrade(let eligibleForTrial):
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Edin+")
-                        .font(.system(size: 26, weight: .heavy))
-                        .foregroundColor(.white)
-                        .lineLimit(1)
+                VStack(spacing: 14) {
+                    PaywallGlowText(text: "Edin+", size: 44)
+                        .accessibilityLabel(Text(verbatim: "Edin+"))
 
                     Text(
                         eligibleForTrial
                             ? String(localized: "Try everything free for 7 days, then keep it all.")
                             : String(localized: "Unlock unlimited reminders, events and habits.")
                     )
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.white.opacity(0.95))
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.6))
+                    .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
 
-                    HStack(spacing: 6) {
-                        benefitChip("infinity", "Unlimited")
-                        benefitChip("square.grid.2x2.fill", "Widgets")
-                        benefitChip("icloud.fill", "Sync")
+                    HStack(spacing: 16) {
+                        benefit("infinity", "Unlimited")
+                        benefit("square.grid.2x2.fill", "Widgets")
+                        benefit("icloud.fill", "Sync")
                     }
 
-                    Button(action: onUpgrade) {
-                        HStack(spacing: 6) {
-                            Text(
-                                eligibleForTrial
-                                    ? String(localized: "Start Free Trial")
-                                    : String(localized: "Upgrade to Edin+")
-                            )
-                            .font(.system(size: 16, weight: .bold))
-                            Image(systemName: "arrow.right")
-                                .font(.system(size: 13, weight: .bold))
-                        }
-                        .foregroundColor(Color.premiumRed)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Capsule().fill(Color.white))
-                    }
-                    .buttonStyle(.plain)
+                    PaywallCTAButton(
+                        title: eligibleForTrial
+                            ? String(localized: "Start Free Trial")
+                            : String(localized: "Upgrade to Edin+"),
+                        action: onUpgrade
+                    )
+                    .padding(.top, 4)
                 }
-                .padding(20)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 18)
+                .padding(.top, 26)
+                .padding(.bottom, 18)
 
             case .active(let plan):
-                VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 16) {
                     HStack(spacing: 12) {
-                        glyph(systemName: "checkmark.seal.fill")
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color.premiumRedBright)
+                            .frame(width: 38, height: 38)
+                            .background(Circle().fill(Color.white.opacity(0.07)))
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(plan.displayName)
-                                .font(.system(size: 22, weight: .bold))
-                                .foregroundColor(.white)
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundStyle(.white)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.8)
 
                             Text("You are subscribed to \(plan.shortName)")
-                                .font(.system(size: 13, weight: .regular))
-                                .foregroundColor(.white.opacity(0.92))
+                                .font(.system(size: 13))
+                                .foregroundStyle(.white.opacity(0.55))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.75)
                         }
@@ -339,43 +352,40 @@ struct SettingsPremiumCard: View {
 
                     Button(action: onManage) {
                         Text("Manage")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(.white)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(Capsule().fill(Color.white.opacity(0.16)))
-                            .overlay(
-                                Capsule().strokeBorder(Color.white.opacity(0.55), lineWidth: 1.2)
+                            .frame(height: 48)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(Color.white.opacity(0.1))
                             )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PaywallPressStyle())
                 }
-                .padding(20)
+                .padding(18)
             }
         }
-        .background(Color.premiumRed)
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .shadow(color: Color.premiumRed.opacity(0.3), radius: 16, x: 0, y: 8)
-    }
-
-    private func glyph(systemName: String) -> some View {
-        Image(systemName: systemName)
-            .font(.system(size: 16, weight: .semibold))
-            .foregroundColor(.white)
-            .frame(width: 36, height: 36)
-            .background(Circle().fill(Color.white.opacity(0.22)))
-    }
-
-    private func benefitChip(_ icon: String, _ title: String) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.system(size: 10, weight: .bold))
-            Text(LocalizedStringKey(title))
-                .font(.system(size: 12, weight: .semibold))
+        .background(alignment: .top) {
+            PaywallGlow(height: 220, intensity: 0.8)
         }
-        .foregroundColor(.white)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(Capsule().fill(Color.white.opacity(0.18)))
+        .background(Color.paywallBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.06), lineWidth: 1)
+        )
+        .environment(\.colorScheme, .dark)
+    }
+
+    private func benefit(_ icon: String, _ title: String) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: icon)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(Color.premiumRedBright)
+            Text(LocalizedStringKey(title))
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.85))
+        }
     }
 }
