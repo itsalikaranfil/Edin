@@ -36,7 +36,7 @@ enum ProductID: String, CaseIterable {
         switch self {
         case .weekly: return "$1.99"
         case .monthly: return "$4.99"
-        case .annual: return "$49.99"
+        case .annual: return "$44.99"
         }
     }
     
