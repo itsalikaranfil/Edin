@@ -19,7 +19,9 @@ struct ContentView: View {
     @StateObject private var selectedDayManager = SelectedDayManager.shared
     @StateObject private var folderSheetCoordinator = FolderSheetCoordinator.shared
     @StateObject private var alarmSheetCoordinator = AlarmSheetCoordinator.shared
+    @ObservedObject private var tabBarVisibility = TabBarVisibility.shared
     @AppStorage("appAppearance") private var appAppearanceRaw = AppAppearance.system.rawValue
+    @AppStorage(AccentSetting.tabHighlight.rawValue) private var tabHighlightRaw = AccentSetting.tabHighlight.defaultChoice.rawValue
     @State private var selectedTab = 0
     @State private var newItemPresentation: NewItemPresentation?
     @State private var presentTypeMenu = false
@@ -47,11 +49,15 @@ struct ContentView: View {
         )
     }
 
-    /// Tab bar ignores Label foregroundStyle; use an always-original red glyph instead.
+    private var tabHighlightColor: Color {
+        AccentChoice.color(for: tabHighlightRaw)
+    }
+
+    /// Tab bar ignores Label foregroundStyle; use an always-original tinted glyph instead.
     private var todayTabBackIcon: Image {
         let config = UIImage.SymbolConfiguration(scale: .large)
         let uiImage = UIImage(systemName: "arrow.backward", withConfiguration: config)?
-            .withTintColor(UIColor(Color.flagRed), renderingMode: .alwaysOriginal)
+            .withTintColor(UIColor(tabHighlightColor), renderingMode: .alwaysOriginal)
         return Image(uiImage: uiImage ?? UIImage())
     }
 
@@ -101,7 +107,7 @@ struct ContentView: View {
         .tabViewStyle(.sidebarAdaptable)
         .preferredColorScheme(appAppearance.preferredColorScheme)
         // Selected tab highlight (forms that need neutral accents set .tint(.secondary) locally).
-        .tint(Color.flagRed)
+        .tint(tabHighlightColor)
         .overlay(alignment: .bottomTrailing) {
             // Invisible UIMenu anchor over the plus control — same system liquid glass menu as filter.
             SystemMenuAnchor(
@@ -120,6 +126,7 @@ struct ContentView: View {
             .allowsHitTesting(
                 (!folderSheetCoordinator.isPresented || folderSheetCoordinator.viewingFolderID != nil)
                     && !alarmSheetCoordinator.isPresented
+                    && !tabBarVisibility.isHidden
             )
         }
         .onChange(of: selectedTab) { oldValue, newValue in

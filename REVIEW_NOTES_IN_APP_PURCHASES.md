@@ -47,7 +47,7 @@ Restore: "Restore purchase" button at bottom of subscription sheet.
 
 **Review notes:**
 ```
-One+ Annual is a recurring annual subscription ($49.99/year) that unlocks unlimited reminders and events in the One calendar app.
+One+ Annual is a recurring annual subscription ($44.99/year) that unlocks unlimited reminders and events in the One calendar app.
 
 HOW TO TEST:
 1. Open app → Settings tab → tap "Upgrade"

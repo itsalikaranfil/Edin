@@ -18,6 +18,7 @@ struct SettingsView: View {
     @StateObject private var notificationManager = NotificationManager.shared
     @StateObject private var alarmAuthorization = AlarmAuthorizationStore.shared
     @StateObject private var cloudSyncStatus = CloudSyncStatus.shared
+    @ObservedObject private var appleCalendar = AppleCalendarStore.shared
     @AppStorage("appAppearance") private var appAppearanceRaw = AppAppearance.system.rawValue
     
     @State private var showSubscription = false
@@ -81,7 +82,38 @@ struct SettingsView: View {
                             .fontWeight(.semibold)
                             .foregroundColor(.gray)
 
-                        VStack(alignment: .leading, spacing: 10) {
+                        NavigationLink {
+                            CalendarEventsSettingsView()
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "calendar")
+                                    .font(.body)
+                                    .foregroundColor(Color.primaryText)
+                                    .frame(width: 24)
+
+                                Text("Calendar Events")
+                                    .font(.body)
+                                    .foregroundColor(Color.primaryText)
+
+                                Spacer()
+
+                                Text(appleCalendar.isActive || appleCalendar.isExportActive ? "On" : "Off")
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
+
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.gray)
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.vertical, 4)
+
+                        NavigationLink {
+                            AppearanceSettingsView()
+                        } label: {
                             HStack(spacing: 12) {
                                 Image(systemName: "circle.lefthalf.filled")
                                     .font(.body)
@@ -93,15 +125,19 @@ struct SettingsView: View {
                                     .foregroundColor(Color.primaryText)
 
                                 Spacer()
-                            }
 
-                            Picker("Appearance", selection: appAppearance) {
-                                ForEach(AppAppearance.allCases) { option in
-                                    Text(option.title).tag(option)
-                                }
+                                Text(appAppearance.wrappedValue.title)
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
+
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.gray)
                             }
-                            .pickerStyle(.segmented)
+                            .contentShape(Rectangle())
                         }
+                        .buttonStyle(.plain)
                         .padding(.vertical, 4)
                         
                         HStack(spacing: 12) {

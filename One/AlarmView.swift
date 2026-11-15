@@ -54,10 +54,8 @@ struct AlarmView: View {
                     .listRowSeparator(index == alarms.count - 1 ? .hidden : .visible, edges: .bottom)
                     .listRowBackground(Color.sheetSurface)
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) {
+                        SwipeDeleteButton {
                             deleteAlarm(alarm)
-                        } label: {
-                            Label("Delete", systemImage: "trash")
                         }
                     }
                 }
