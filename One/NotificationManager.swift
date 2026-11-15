@@ -369,17 +369,27 @@ final class NotificationManager: NSObject, ObservableObject, UNUserNotificationC
         [.banner, .sound, .badge]
     }
 
+    /// Completion-handler form on purpose: the async form can finish off the main thread, and the
+    /// system requires the handler to be called on the main thread.
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
-        didReceive response: UNNotificationResponse
-    ) async {
-        guard response.actionIdentifier == Self.markCompletedActionIdentifier else { return }
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
         let userInfo = response.notification.request.content.userInfo
-        guard let type = userInfo["type"] as? String,
+        guard response.actionIdentifier == Self.markCompletedActionIdentifier,
+              let type = userInfo["type"] as? String,
               let id = userInfo["id"] as? String,
-              let uuid = UUID(uuidString: id) else { return }
+              let uuid = UUID(uuidString: id) else {
+            DispatchQueue.main.async { completionHandler() }
+            return
+        }
         let occurrenceDayKey = userInfo["occurrenceDay"] as? String
-        await markCompleted(type: type, id: uuid, occurrenceDayKey: occurrenceDayKey)
+        nonisolated(unsafe) let finish = completionHandler
+        Task { @MainActor in
+            await self.markCompleted(type: type, id: uuid, occurrenceDayKey: occurrenceDayKey)
+            finish()
+        }
     }
 
     /// Completes the item behind a notification action. The action can launch the app in the
