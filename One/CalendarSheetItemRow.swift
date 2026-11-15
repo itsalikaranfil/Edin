@@ -654,14 +654,20 @@ struct ToolbarGlassCancelButton: View {
     }
 }
 
-/// Nav-toolbar save/done — system glassProminent + red tint, light red checkmark.
+/// Nav-toolbar save/done — system glassProminent tinted with the checkmark accent, light checkmark.
 struct ToolbarGlassConfirmButton: View {
     var accessibilityLabelText: String = "Save"
     var isEnabled: Bool = true
     var action: () -> Void
 
-    private var checkmarkLightRed: Color {
-        Color(red: 1.0, green: 0.72, blue: 0.72)
+    @AppStorage(AccentSetting.checkmark.rawValue) private var checkmarkRaw = AccentSetting.checkmark.defaultChoice.rawValue
+
+    private var accent: Color {
+        AccentChoice.color(for: checkmarkRaw)
+    }
+
+    private var checkmarkLight: Color {
+        accent.mix(with: .white, by: 0.7)
     }
 
     var body: some View {
@@ -670,10 +676,10 @@ struct ToolbarGlassConfirmButton: View {
             action()
         } label: {
             Image(systemName: "checkmark")
-                .foregroundStyle(checkmarkLightRed)
+                .foregroundStyle(checkmarkLight)
         }
         .buttonStyle(.glassProminent)
-        .tint(Color.flagRed)
+        .tint(accent)
         .disabled(!isEnabled)
         .opacity(isEnabled ? 1 : 0.4)
         .accessibilityLabel(accessibilityLabelText)

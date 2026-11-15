@@ -81,7 +81,9 @@ struct SettingsView: View {
                             .fontWeight(.semibold)
                             .foregroundColor(.gray)
 
-                        VStack(alignment: .leading, spacing: 10) {
+                        NavigationLink {
+                            AppearanceSettingsView()
+                        } label: {
                             HStack(spacing: 12) {
                                 Image(systemName: "circle.lefthalf.filled")
                                     .font(.body)
@@ -93,15 +95,19 @@ struct SettingsView: View {
                                     .foregroundColor(Color.primaryText)
 
                                 Spacer()
-                            }
 
-                            Picker("Appearance", selection: appAppearance) {
-                                ForEach(AppAppearance.allCases) { option in
-                                    Text(option.title).tag(option)
-                                }
+                                Text(appAppearance.wrappedValue.title)
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
+
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.gray)
                             }
-                            .pickerStyle(.segmented)
+                            .contentShape(Rectangle())
                         }
+                        .buttonStyle(.plain)
                         .padding(.vertical, 4)
                         
                         HStack(spacing: 12) {

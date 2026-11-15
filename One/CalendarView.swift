@@ -784,8 +784,14 @@ struct DayCellView: View {
     let hasOverdueItems: Bool
     let selectedDate: Date?
     let onTap: () -> Void
+
+    @AppStorage(AccentSetting.todayCircle.rawValue) private var todayCircleRaw = AccentSetting.todayCircle.defaultChoice.rawValue
     
     private let calendar = Calendar.current
+
+    private var todayColor: Color {
+        AccentChoice.color(for: todayCircleRaw)
+    }
     
     private var isSelected: Bool {
         guard let selectedDate = selectedDate else { return false }
@@ -804,14 +810,14 @@ struct DayCellView: View {
                 .foregroundColor(
                     shouldHighlight
                         ? (isToday ? Color.white : Color.screenBackground)
-                        : (isToday ? Color.flagRed : (isCurrentMonth ? Color.primaryText : .gray))
+                        : (isToday ? todayColor : (isCurrentMonth ? Color.primaryText : .gray))
                 )
                 .frame(width: 38, height: 38)
                 .background(
                     Circle()
                         .fill(
                             shouldHighlight
-                                ? (isToday ? Color.flagRed : Color.primaryText)
+                                ? (isToday ? todayColor : Color.primaryText)
                                 : Color.clear
                         )
                 )
