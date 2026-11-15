@@ -1055,6 +1055,7 @@ struct DayItemIndicator: View {
     let maxWidth: CGFloat
 
     private let height: CGFloat = 5
+    private let markerBlue = Color(red: 51 / 255, green: 119 / 255, blue: 194 / 255)
     private let widthPerExtraItem: CGFloat = 5
 
     private var width: CGFloat {
@@ -1069,7 +1070,7 @@ struct DayItemIndicator: View {
                 Color.clear
             case 1:
                 Circle()
-                    .fill(counts.events > 0 ? Color.eventBlue : Color.gray)
+                    .fill(counts.events > 0 ? markerBlue : Color.gray)
             default:
                 segments
             }
@@ -1088,7 +1089,7 @@ struct DayItemIndicator: View {
                 }
                 if counts.events > 0 {
                     Rectangle()
-                        .fill(Color.eventBlue)
+                        .fill(markerBlue)
                 }
             }
         }
