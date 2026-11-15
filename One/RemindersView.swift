@@ -923,19 +923,13 @@ struct HabitRow: View {
         .buttonStyle(.plain)
         .swipeActions(edge: .trailing, allowsFullSwipe: !ItemActions.isRepeating(repeatOption: habit.repeatOption)) {
             if ItemActions.isRepeating(repeatOption: habit.repeatOption) {
-                Button {
+                SwipeDeleteButton(isDestructive: false) {
                     showRepeatDeleteConfirmation = true
-                } label: {
-                    Label("Delete", systemImage: "trash")
                 }
-                .tint(Color(uiColor: .systemRed))
             } else {
-                Button(role: .destructive) {
+                SwipeDeleteButton {
                     ItemActions.delete(habit, context: viewContext)
-                } label: {
-                    Label("Delete", systemImage: "trash")
                 }
-                .tint(Color(uiColor: .systemRed))
             }
         }
         .contextMenu {
@@ -1129,17 +1123,12 @@ struct ReminderRow: View {
         .buttonStyle(PlainButtonStyle())
         .swipeActions(edge: .trailing, allowsFullSwipe: !ItemActions.isRepeating(repeatOption: reminder.repeatOption)) {
             if ItemActions.isRepeating(repeatOption: reminder.repeatOption) {
-                Button {
+                SwipeDeleteButton(isDestructive: false) {
                     performSwipeDelete()
-                } label: {
-                    Label("Delete", systemImage: "trash")
                 }
-                .tint(Color(uiColor: .systemRed))
             } else {
-                Button(role: .destructive) {
+                SwipeDeleteButton {
                     performSwipeDelete()
-                } label: {
-                    Label("Delete", systemImage: "trash")
                 }
             }
         }
@@ -1394,17 +1383,12 @@ struct EventRow: View {
         .buttonStyle(PlainButtonStyle())
         .swipeActions(edge: .trailing, allowsFullSwipe: !ItemActions.isRepeating(repeatOption: event.repeatOption)) {
             if ItemActions.isRepeating(repeatOption: event.repeatOption) {
-                Button {
+                SwipeDeleteButton(isDestructive: false) {
                     performSwipeDelete()
-                } label: {
-                    Label("Delete", systemImage: "trash")
                 }
-                .tint(Color(uiColor: .systemRed))
             } else {
-                Button(role: .destructive) {
+                SwipeDeleteButton {
                     performSwipeDelete()
-                } label: {
-                    Label("Delete", systemImage: "trash")
                 }
             }
         }
