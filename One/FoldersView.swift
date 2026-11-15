@@ -74,13 +74,12 @@ struct FoldersView: View {
                                 folderNameSheetMode = .rename(folder)
                             } label: {
                                 Label("Edit", systemImage: "pencil")
+                                    .labelStyle(.titleAndIcon)
                             }
                             .tint(.blue)
 
-                            Button(role: .destructive) {
+                            SwipeDeleteButton {
                                 deleteFolder(folder)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
                             }
                         }
                     }
