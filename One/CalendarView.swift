@@ -481,8 +481,8 @@ struct CalendarView: View {
                 .padding(.horizontal)
                 .padding(.top, 8)
 
-                // Weekday Headers
-                HStack(spacing: 0) {
+                // Weekday Headers; spacing matches the day grid rows so each letter centers over its column.
+                HStack(spacing: 8) {
                     let weekdays = ["M", "T", "W", "T", "F", "S", "S"]
                     ForEach(Array(weekdays.enumerated()), id: \.offset) { _, day in
                         Text(day)
