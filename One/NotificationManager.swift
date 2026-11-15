@@ -16,15 +16,40 @@ final class NotificationManager: NSObject, ObservableObject, UNUserNotificationC
     static let shared = NotificationManager()
     
     @Published var authorizationStatus: UNAuthorizationStatus = .notDetermined
+
+    nonisolated static let reminderCategoryIdentifier = "REMINDER"
+    nonisolated static let habitCategoryIdentifier = "HABIT"
+    nonisolated static let markCompletedActionIdentifier = "MARK_COMPLETED"
     
     private override init() {
         super.init()
         UNUserNotificationCenter.current().delegate = self
+        registerCategories()
         Task {
             await checkAuthorizationStatus()
         }
     }
     
+    private func registerCategories() {
+        let markCompleted = UNNotificationAction(
+            identifier: Self.markCompletedActionIdentifier,
+            title: String(localized: "Mark as Completed"),
+            options: [],
+            icon: UNNotificationActionIcon(systemImageName: "checkmark.circle")
+        )
+        let reminderCategory = UNNotificationCategory(
+            identifier: Self.reminderCategoryIdentifier,
+            actions: [markCompleted],
+            intentIdentifiers: []
+        )
+        let habitCategory = UNNotificationCategory(
+            identifier: Self.habitCategoryIdentifier,
+            actions: [markCompleted],
+            intentIdentifiers: []
+        )
+        UNUserNotificationCenter.current().setNotificationCategories([reminderCategory, habitCategory])
+    }
+
     /// Check current authorization status
     func checkAuthorizationStatus() async {
         let settings = await UNUserNotificationCenter.current().notificationSettings()
@@ -241,6 +266,7 @@ final class NotificationManager: NSObject, ObservableObject, UNUserNotificationC
         content.title = reminder.title ?? "Untitled"
         content.body = alert.notificationBody(itemDate: notificationDate)
         content.sound = .default
+        content.categoryIdentifier = Self.reminderCategoryIdentifier
         content.userInfo = [
             "type": "reminder",
             "id": reminder.id?.uuidString ?? ""
@@ -285,10 +311,15 @@ final class NotificationManager: NSObject, ObservableObject, UNUserNotificationC
         content.title = habit.title ?? "Untitled"
         content.body = alert.notificationBody(itemDate: notificationDate)
         content.sound = .default
-        content.userInfo = [
+        content.categoryIdentifier = Self.habitCategoryIdentifier
+        var userInfo: [String: Any] = [
             "type": "habit",
             "id": habit.id?.uuidString ?? ""
         ]
+        if let day = habit.date {
+            userInfo["occurrenceDay"] = Recurrence.dayKey(for: day)
+        }
+        content.userInfo = userInfo
 
         let request = UNNotificationRequest(
             identifier: identifier,
@@ -336,6 +367,70 @@ final class NotificationManager: NSObject, ObservableObject, UNUserNotificationC
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
         [.banner, .sound, .badge]
+    }
+
+    /// Completion-handler form on purpose: the async form can finish off the main thread, and the
+    /// system requires the handler to be called on the main thread.
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        let userInfo = response.notification.request.content.userInfo
+        guard response.actionIdentifier == Self.markCompletedActionIdentifier,
+              let type = userInfo["type"] as? String,
+              let id = userInfo["id"] as? String,
+              let uuid = UUID(uuidString: id) else {
+            DispatchQueue.main.async { completionHandler() }
+            return
+        }
+        let occurrenceDayKey = userInfo["occurrenceDay"] as? String
+        nonisolated(unsafe) let finish = completionHandler
+        Task { @MainActor in
+            await self.markCompleted(type: type, id: uuid, occurrenceDayKey: occurrenceDayKey)
+            finish()
+        }
+    }
+
+    /// Completes the item behind a notification action. The action can launch the app in the
+    /// background, so it waits for the persistent store to finish loading first.
+    private func markCompleted(type: String, id: UUID, occurrenceDayKey: String?) async {
+        var attempts = 0
+        while !StoreLoadState.shared.isLoaded, attempts < 50 {
+            attempts += 1
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+        guard StoreLoadState.shared.isLoaded else { return }
+
+        let context = PersistenceController.shared.container.viewContext
+        switch type {
+        case "reminder":
+            let request = NSFetchRequest<Reminder>(entityName: "Reminder")
+            request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+            request.fetchLimit = 1
+            guard let reminder = try? context.fetch(request).first, !reminder.isCompleted else { return }
+            reminder.completeOrRollForward()
+        case "habit":
+            let request = NSFetchRequest<Habit>(entityName: "Habit")
+            request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+            request.fetchLimit = 1
+            guard let habit = try? context.fetch(request).first else { return }
+            let day = occurrenceDayKey.flatMap { Recurrence.date(fromDayKey: $0) }
+                ?? Calendar.current.startOfDay(for: Date())
+            guard !habit.isCompleted(on: day) else { return }
+            habit.setCompleted(true, on: day)
+        default:
+            return
+        }
+
+        let itemId = id.uuidString
+        UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [
+            "\(type)_\(itemId)",
+            "\(type)_\(itemId)_atTime",
+            "\(type)_\(itemId)_second"
+        ])
+        PersistenceController.shared.save()
+        NotificationCenter.default.post(name: .dataDidChange, object: nil)
     }
     
     /// Cancel notification for an item
