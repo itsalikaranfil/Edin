@@ -46,17 +46,34 @@ extension View {
 }
 
 extension EnvironmentValues {
-    /// Interactive glass stretches toward the finger, so pills inside a draggable area
-    /// (e.g. the calendar sheet header) turn it off to stay put while the sheet is dragged.
+    /// Pills inside a draggable area (e.g. the calendar sheet header) set this to false. Glass is
+    /// rendered on its own layer that can lag or animate separately while the sheet moves, so those
+    /// pills draw a plain capsule that matches the glass look on the solid sheet surface instead.
     @Entry var glassPillsInteractive: Bool = true
 }
 
 private struct GlassCapsulePillModifier: ViewModifier {
     let active: Bool
     @Environment(\.glassPillsInteractive) private var interactive
+    @Environment(\.colorScheme) private var colorScheme
 
     func body(content: Content) -> some View {
-        let base: Glass = active ? .regular.tint(.white.opacity(0.15)) : .regular
-        content.glassEffect(base.interactive(interactive), in: .capsule)
+        if interactive {
+            let base: Glass = active ? .regular.tint(.white.opacity(0.15)) : .regular
+            content.glassEffect(base.interactive(), in: .capsule)
+        } else {
+            content.background(staticCapsule)
+        }
+    }
+
+    private var staticCapsule: some View {
+        let isDark = colorScheme == .dark
+        let fill: Color = isDark
+            ? .white.opacity(active ? 0.22 : 0.12)
+            : (active ? Color.black.opacity(0.08) : .white)
+        let stroke: Color = isDark ? .white.opacity(0.10) : .black.opacity(0.08)
+        return Capsule()
+            .fill(fill)
+            .overlay(Capsule().strokeBorder(stroke, lineWidth: 0.5))
     }
 }
