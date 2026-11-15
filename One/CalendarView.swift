@@ -509,7 +509,7 @@ struct CalendarView: View {
                                         date: date,
                                         isToday: calendar.isDateInToday(date),
                                         isCurrentMonth: calendar.isDate(date, equalTo: currentMonth, toGranularity: .month),
-                                        hasItems: markers.withItems.contains(dayStart),
+                                        itemCounts: markers.counts[dayStart] ?? DayItemCounts(),
                                         hasOverdueItems: markers.overdue.contains(dayStart),
                                         selectedDate: selectedDay,
                                         onTap: {
@@ -792,12 +792,12 @@ struct CalendarView: View {
     }
     
     private struct DayMarkers {
-        var withItems: Set<Date> = []
+        var counts: [Date: DayItemCounts] = [:]
         var overdue: Set<Date> = []
     }
 
-    /// Dot state for every visible day in one pass. Non-repeating items land on a single day, so they
-    /// are bucketed directly instead of being tested against every cell.
+    /// Per-day item counts for every visible day in one pass. Non-repeating items land on a single day,
+    /// so they are bucketed directly instead of being tested against every cell.
     private func dayMarkers(for days: [Date]) -> DayMarkers {
         let dayStarts = days.map { calendar.startOfDay(for: $0) }
         let visibleDays = Set(dayStarts)
@@ -805,22 +805,30 @@ struct CalendarView: View {
         var markers = DayMarkers()
 
         /// `overdueDate` is nil for items that can't be overdue (all-day events, completed reminders, habits).
-        func mark(baseDate: Date, option: RepeatOption, excludedDates: String?, overdueDate: Date?) {
+        func count(_ day: Date, isEvent: Bool) {
+            if isEvent {
+                markers.counts[day, default: DayItemCounts()].events += 1
+            } else {
+                markers.counts[day, default: DayItemCounts()].others += 1
+            }
+        }
+
+        func mark(baseDate: Date, option: RepeatOption, excludedDates: String?, overdueDate: Date?, isEvent: Bool = false) {
             if option == .never {
                 let day = calendar.startOfDay(for: baseDate)
                 guard visibleDays.contains(day),
                       Recurrence.occurs(on: day, baseDate: baseDate, option: option, excludedDates: excludedDates, calendar: calendar)
                 else { return }
-                markers.withItems.insert(day)
+                count(day, isEvent: isEvent)
                 if let overdueDate, day <= todayStart, calendar.startOfDay(for: overdueDate) < todayStart {
                     markers.overdue.insert(day)
                 }
             } else {
                 // Repeats are expected on past days, so they never mark a day overdue.
-                for day in dayStarts where !markers.withItems.contains(day) {
-                    if Recurrence.occurs(on: day, baseDate: baseDate, option: option, excludedDates: excludedDates, calendar: calendar) {
-                        markers.withItems.insert(day)
-                    }
+                for day in dayStarts where Recurrence.occurs(
+                    on: day, baseDate: baseDate, option: option, excludedDates: excludedDates, calendar: calendar
+                ) {
+                    count(day, isEvent: isEvent)
                 }
             }
         }
@@ -831,7 +839,8 @@ struct CalendarView: View {
                 baseDate: date,
                 option: Recurrence.option(from: event.repeatOption),
                 excludedDates: event.excludedDatesStorage,
-                overdueDate: event.isAllDay ? nil : (event.startTime ?? date)
+                overdueDate: event.isAllDay ? nil : (event.startTime ?? date),
+                isEvent: true
             )
         }
         for reminder in reminders {
@@ -986,7 +995,7 @@ struct DayCellView: View {
     let date: Date
     let isToday: Bool
     let isCurrentMonth: Bool
-    let hasItems: Bool
+    let itemCounts: DayItemCounts
     let hasOverdueItems: Bool
     let selectedDate: Date?
     let onTap: () -> Void
@@ -1022,22 +1031,70 @@ struct DayCellView: View {
                         )
                 )
             
-            // Red dot indicator for days with items
-            if hasItems {
-                Circle()
-                    .fill(Color.gray)
-                    .frame(width: 5, height: 5)
-            } else {
-                // Invisible spacer to maintain consistent height
-                Circle()
-                    .fill(Color.clear)
-                    .frame(width: 5, height: 5)
-            }
+            DayItemIndicator(counts: itemCounts, maxWidth: 38)
         }
         .frame(maxWidth: .infinity)
         .frame(height: Self.rowHeight)
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
+    }
+}
+
+struct DayItemCounts: Equatable {
+    var events = 0
+    var others = 0
+
+    var total: Int { events + others }
+}
+
+/// Apple Calendar style marker under a day: one item is a dot (blue for an event, gray otherwise);
+/// more items become a small pill that grows with the count, split into gray and blue parts by
+/// share, and never gets wider than the date circle.
+struct DayItemIndicator: View {
+    let counts: DayItemCounts
+    let maxWidth: CGFloat
+
+    private let height: CGFloat = 5
+    private let widthPerExtraItem: CGFloat = 5
+
+    private var width: CGFloat {
+        guard counts.total > 1 else { return height }
+        return min(maxWidth, height + CGFloat(counts.total - 1) * widthPerExtraItem)
+    }
+
+    var body: some View {
+        Group {
+            switch counts.total {
+            case 0:
+                Color.clear
+            case 1:
+                Circle()
+                    .fill(counts.events > 0 ? Color.eventBlue : Color.gray)
+            default:
+                segments
+            }
+        }
+        .frame(width: width, height: height)
+    }
+
+    private var segments: some View {
+        GeometryReader { proxy in
+            let spacing: CGFloat = counts.events > 0 && counts.others > 0 ? 1 : 0
+            let available = proxy.size.width - spacing
+            let othersWidth = available * CGFloat(counts.others) / CGFloat(counts.total)
+            HStack(spacing: spacing) {
+                if counts.others > 0 {
+                    Rectangle()
+                        .fill(Color.gray)
+                        .frame(width: othersWidth)
+                }
+                if counts.events > 0 {
+                    Rectangle()
+                        .fill(Color.eventBlue)
+                }
+            }
+        }
+        .clipShape(Capsule())
     }
 }
 
