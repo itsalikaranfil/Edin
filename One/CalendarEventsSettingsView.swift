@@ -51,6 +51,7 @@ struct CalendarEventsSettingsView: View {
         .background(Color.screenBackground.ignoresSafeArea())
         .navigationTitle("Calendar Events")
         .navigationBarTitleDisplayMode(.inline)
+        .hidesTabBar()
         .animation(.snappy(duration: 0.25), value: store.isActive)
         .animation(.snappy(duration: 0.25), value: store.hiddenCalendarIDs)
         .onAppear { store.refresh() }

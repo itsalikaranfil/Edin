@@ -60,6 +60,7 @@ struct AppearanceSettingsView: View {
         .background(Color.screenBackground.ignoresSafeArea())
         .navigationTitle("Appearance")
         .navigationBarTitleDisplayMode(.inline)
+        .hidesTabBar()
         .animation(.snappy(duration: 0.25), value: textSizeModeRaw)
         .animation(.snappy(duration: 0.25), value: tabHighlightRaw)
         .animation(.snappy(duration: 0.25), value: checkmarkRaw)

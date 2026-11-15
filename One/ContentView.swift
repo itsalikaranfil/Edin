@@ -19,6 +19,7 @@ struct ContentView: View {
     @StateObject private var selectedDayManager = SelectedDayManager.shared
     @StateObject private var folderSheetCoordinator = FolderSheetCoordinator.shared
     @StateObject private var alarmSheetCoordinator = AlarmSheetCoordinator.shared
+    @ObservedObject private var tabBarVisibility = TabBarVisibility.shared
     @AppStorage("appAppearance") private var appAppearanceRaw = AppAppearance.system.rawValue
     @AppStorage(AccentSetting.tabHighlight.rawValue) private var tabHighlightRaw = AccentSetting.tabHighlight.defaultChoice.rawValue
     @State private var selectedTab = 0
@@ -125,6 +126,7 @@ struct ContentView: View {
             .allowsHitTesting(
                 (!folderSheetCoordinator.isPresented || folderSheetCoordinator.viewingFolderID != nil)
                     && !alarmSheetCoordinator.isPresented
+                    && !tabBarVisibility.isHidden
             )
         }
         .onChange(of: selectedTab) { oldValue, newValue in
