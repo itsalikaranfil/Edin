@@ -1079,10 +1079,8 @@ struct DayItemIndicator: View {
 
     private var segments: some View {
         GeometryReader { proxy in
-            let spacing: CGFloat = counts.events > 0 && counts.others > 0 ? 1 : 0
-            let available = proxy.size.width - spacing
-            let othersWidth = available * CGFloat(counts.others) / CGFloat(counts.total)
-            HStack(spacing: spacing) {
+            let othersWidth = proxy.size.width * CGFloat(counts.others) / CGFloat(counts.total)
+            HStack(spacing: 0) {
                 if counts.others > 0 {
                     Rectangle()
                         .fill(Color.gray)
