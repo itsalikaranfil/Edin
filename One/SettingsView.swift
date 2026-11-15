@@ -18,6 +18,7 @@ struct SettingsView: View {
     @StateObject private var notificationManager = NotificationManager.shared
     @StateObject private var alarmAuthorization = AlarmAuthorizationStore.shared
     @StateObject private var cloudSyncStatus = CloudSyncStatus.shared
+    @ObservedObject private var appleCalendar = AppleCalendarStore.shared
     @AppStorage("appAppearance") private var appAppearanceRaw = AppAppearance.system.rawValue
     
     @State private var showSubscription = false
@@ -80,6 +81,35 @@ struct SettingsView: View {
                             .font(.subheadline)
                             .fontWeight(.semibold)
                             .foregroundColor(.gray)
+
+                        NavigationLink {
+                            CalendarEventsSettingsView()
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "calendar")
+                                    .font(.body)
+                                    .foregroundColor(Color.primaryText)
+                                    .frame(width: 24)
+
+                                Text("Calendar Events")
+                                    .font(.body)
+                                    .foregroundColor(Color.primaryText)
+
+                                Spacer()
+
+                                Text(appleCalendar.isActive ? "On" : "Off")
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
+
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.gray)
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.vertical, 4)
 
                         NavigationLink {
                             AppearanceSettingsView()

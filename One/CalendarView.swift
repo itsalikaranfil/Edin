@@ -11,6 +11,7 @@ import CoreData
 struct CalendarView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @StateObject private var selectedDayManager = SelectedDayManager.shared
+    @ObservedObject private var appleCalendar = AppleCalendarStore.shared
     
     private static let eventsRequest: NSFetchRequest<Event> = {
         let r = NSFetchRequest<Event>(entityName: "Event")
@@ -59,6 +60,7 @@ struct CalendarView: View {
     @State private var showFlaggedOnly = false
     @State private var folders: [Folder] = []
     @State private var alarms: [Alarm] = []
+    @State private var appleEvents: [AppleCalendarEvent] = []
     @State private var alarmsSheetDetent: SheetDetent = .mid
     
     private let calendar: Calendar = {
@@ -296,6 +298,9 @@ struct CalendarView: View {
                 reloadFolders()
                 reloadAlarms()
             }
+            .onReceive(appleCalendar.$revision) { _ in
+                reloadAppleEvents()
+            }
         }
     }
     
@@ -421,14 +426,23 @@ struct CalendarView: View {
     
     private var sheetItemsList: some View {
         let displayItems = filteredDisplayItems()
+        let dayAppleEvents = filteredAppleEvents()
+        let totalCount = dayAppleEvents.count + displayItems.count
 
         return List {
-            if displayItems.isEmpty {
+            if totalCount == 0 {
                 EmptyListSkeletonView(accessibilityLabel: sheetEmptyMessage)
                     .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
             } else {
+                ForEach(Array(dayAppleEvents.enumerated()), id: \.element.id) { index, appleEvent in
+                    AppleCalendarEventRow(event: appleEvent)
+                        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                        .listRowSeparator(index < totalCount - 1 ? .visible : .hidden, edges: .bottom)
+                        .listRowSeparatorTint(Color.gray.opacity(0.25))
+                        .listRowBackground(Color.sheetSurface)
+                }
                 ForEach(Array(displayItems.enumerated()), id: \.element.id) { index, item in
                     Group {
                         if let event = item.event {
@@ -457,7 +471,27 @@ struct CalendarView: View {
         .scrollContentBackground(.hidden)
         .padding(.bottom, BottomSheetMetrics.tabBarContentInset)
         // Prevent UICollectionView invalid updates when day/filter/delete changes row counts.
-        .animation(nil, value: displayItems.map(\.id))
+        .animation(nil, value: dayAppleEvents.map(\.id) + displayItems.map(\.id))
+    }
+
+    /// Apple Calendar events for the selected day, shown above Edin items like Things does.
+    private func filteredAppleEvents() -> [AppleCalendarEvent] {
+        guard sheetFilter == .all || sheetFilter == .events, !showFlaggedOnly else { return [] }
+        let day = selectedDay ?? Date()
+        return appleEvents
+            .filter { $0.occurs(on: day, calendar: calendar) }
+            .sorted { $0.sortDate(on: day, calendar: calendar) < $1.sortDate(on: day, calendar: calendar) }
+    }
+
+    private func reloadAppleEvents() {
+        let days = daysInMonth
+        guard let first = days.first,
+              let last = days.last,
+              let end = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: last)) else {
+            appleEvents = []
+            return
+        }
+        appleEvents = appleCalendar.events(from: calendar.startOfDay(for: first), to: end)
     }
 
     private func filteredDisplayItems() -> [(id: String, event: Event?, reminder: Reminder?, habit: Habit?)] {
@@ -611,7 +645,9 @@ struct CalendarView: View {
             )
         }
         
-        return hasEvents || hasReminders || hasHabits
+        let hasAppleEvents = appleEvents.contains { $0.occurs(on: dayStart, calendar: calendar) }
+
+        return hasEvents || hasReminders || hasHabits || hasAppleEvents
     }
     
     private func hasOverdueItems(on date: Date) -> Bool {
@@ -688,6 +724,7 @@ struct CalendarView: View {
             never
         )
         habits.nsPredicate = habitPredicate
+        reloadAppleEvents()
     }
     
     private func getItems(for date: Date) -> [(date: Date, event: Event?, reminder: Reminder?, habit: Habit?)] {

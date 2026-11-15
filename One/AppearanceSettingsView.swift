@@ -143,7 +143,8 @@ struct AppearanceSettingsView: View {
 
 // MARK: - Card style
 
-private extension View {
+extension View {
+    /// Rounded card used by the redesigned settings pages.
     func appearanceCard() -> some View {
         background(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
