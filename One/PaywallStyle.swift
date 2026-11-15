@@ -10,7 +10,7 @@ import StoreKit
 
 // MARK: - Glow
 
-/// Red light falling from the top edge: a soft bloom plus four faint white light streaks.
+/// Red light falling from the top edge: a soft bloom plus four faint light red streaks.
 struct PaywallGlow: View {
     var height: CGFloat = 360
     var intensity: Double = 1
@@ -33,7 +33,7 @@ struct PaywallGlow: View {
                     Rectangle()
                         .fill(
                             LinearGradient(
-                                colors: [Color.white.opacity(0.1 * intensity), .clear],
+                                colors: [Color(red: 1, green: 0.6, blue: 0.6).opacity(0.16 * intensity), .clear],
                                 startPoint: .top,
                                 endPoint: .bottom
                             )
