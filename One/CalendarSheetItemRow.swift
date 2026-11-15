@@ -467,19 +467,13 @@ private struct CalendarSheetItemRowLayout<Leading: View, Trailing: View>: View {
         .swipeActions(edge: .trailing, allowsFullSwipe: !isRepeating) {
             // Destructive role eagerly removes the row; repeating deletes need a confirmation first.
             if isRepeating {
-                Button {
+                SwipeDeleteButton(isDestructive: false) {
                     onDelete()
-                } label: {
-                    Label("Delete", systemImage: "trash")
                 }
-                .tint(Color(uiColor: .systemRed))
             } else {
-                Button(role: .destructive) {
+                SwipeDeleteButton {
                     onDelete()
-                } label: {
-                    Label("Delete", systemImage: "trash")
                 }
-                .tint(Color(uiColor: .systemRed))
             }
         }
         .contextMenu {
