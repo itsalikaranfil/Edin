@@ -21,6 +21,8 @@ struct OneApp: App {
     
     init() {
         AppAppearanceStore.syncStandardToAppGroup()
+        // Notification actions can launch the app in the background; the delegate must be set before launch finishes.
+        _ = NotificationManager.shared
         // Set up transaction listener for StoreKit 2
         Task { @MainActor in
             for await result in StoreKit.Transaction.updates {
