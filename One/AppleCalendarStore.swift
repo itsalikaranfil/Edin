@@ -6,6 +6,8 @@
 import SwiftUI
 import EventKit
 import Combine
+import CoreData
+import UIKit
 
 /// Read-only snapshot of one Apple Calendar event occurrence.
 struct AppleCalendarEvent: Identifiable, Hashable {
@@ -48,7 +50,8 @@ struct AppleCalendarGroup: Identifiable {
     var id: String { title }
 }
 
-/// Shows events from the user's Apple calendars next to Edin items (read-only, via EventKit).
+/// Shows events from the user's Apple calendars next to Edin items, and can copy Edin
+/// events and reminders into a dedicated "Edin" calendar (see AppleCalendarExport.swift).
 /// Calendars are visible unless turned off, so newly added calendars show up automatically.
 @MainActor
 final class AppleCalendarStore: ObservableObject {
@@ -56,25 +59,38 @@ final class AppleCalendarStore: ObservableObject {
 
     private static let enabledKey = "showAppleCalendarEvents"
     private static let hiddenCalendarsKey = "hiddenAppleCalendarIDs"
+    private static let exportEnabledKey = "exportToAppleCalendar"
+    static let edinCalendarIDKey = "edinAppleCalendarID"
 
     let eventStore = EKEventStore()
 
     @Published private(set) var authorizationStatus: EKAuthorizationStatus
     @Published private(set) var isEnabled: Bool
     @Published private(set) var hiddenCalendarIDs: Set<String>
+    @Published private(set) var isExportEnabled: Bool
     /// Bumped whenever shown events may have changed (settings, access, or Calendar database edits).
     @Published private(set) var revision = 0
 
     private var storeChangedObserver: NSObjectProtocol?
+    private var exportObservers: [NSObjectProtocol] = []
+    var pendingExport: Task<Void, Never>?
 
     var hasAccess: Bool { authorizationStatus == .fullAccess }
     var isActive: Bool { isEnabled && hasAccess }
+    var isExportActive: Bool { isExportEnabled && hasAccess }
+
+    /// Identifier of the calendar Edin writes to; it's never shown back inside Edin.
+    var edinCalendarID: String? {
+        get { UserDefaults.standard.string(forKey: Self.edinCalendarIDKey) }
+        set { UserDefaults.standard.set(newValue, forKey: Self.edinCalendarIDKey) }
+    }
     var isDenied: Bool { authorizationStatus == .denied || authorizationStatus == .restricted }
 
     private init() {
         authorizationStatus = EKEventStore.authorizationStatus(for: .event)
         isEnabled = UserDefaults.standard.bool(forKey: Self.enabledKey)
         hiddenCalendarIDs = Set(UserDefaults.standard.stringArray(forKey: Self.hiddenCalendarsKey) ?? [])
+        isExportEnabled = UserDefaults.standard.bool(forKey: Self.exportEnabledKey)
         storeChangedObserver = NotificationCenter.default.addObserver(
             forName: .EKEventStoreChanged,
             object: eventStore,
@@ -82,6 +98,23 @@ final class AppleCalendarStore: ObservableObject {
         ) { [weak self] _ in
             Task { @MainActor in self?.refresh() }
         }
+        exportObservers = [
+            NotificationCenter.default.addObserver(
+                forName: .NSManagedObjectContextDidSave,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor in self?.scheduleExport() }
+            },
+            NotificationCenter.default.addObserver(
+                forName: UIApplication.didBecomeActiveNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor in self?.scheduleExport() }
+            }
+        ]
+        scheduleExport()
     }
 
     /// Re-reads access, e.g. after the user returns from the Settings app.
@@ -101,10 +134,28 @@ final class AppleCalendarStore: ObservableObject {
         revision += 1
     }
 
+    /// Turns copying Edin events and reminders into Apple Calendar on or off.
+    /// Turning it off removes the "Edin" calendar and everything Edin put in it.
+    func setExportEnabled(_ enabled: Bool) async {
+        if enabled && !hasAccess {
+            _ = try? await eventStore.requestFullAccessToEvents()
+            authorizationStatus = EKEventStore.authorizationStatus(for: .event)
+        }
+        isExportEnabled = enabled && hasAccess
+        UserDefaults.standard.set(isExportEnabled, forKey: Self.exportEnabledKey)
+        if isExportEnabled {
+            exportNow()
+        } else {
+            pendingExport?.cancel()
+            removeEdinCalendar()
+        }
+        revision += 1
+    }
+
     var calendarGroups: [AppleCalendarGroup] {
         guard hasAccess else { return [] }
         var grouped: [String: [EKCalendar]] = [:]
-        for calendar in eventStore.calendars(for: .event) {
+        for calendar in eventStore.calendars(for: .event) where calendar.calendarIdentifier != edinCalendarID {
             grouped[groupTitle(for: calendar), default: []].append(calendar)
         }
         return grouped
@@ -129,7 +180,10 @@ final class AppleCalendarStore: ObservableObject {
     /// Occurrences overlapping `start..<end` from the visible calendars; empty when the feature is off.
     func events(from start: Date, to end: Date) -> [AppleCalendarEvent] {
         guard isActive, start < end else { return [] }
-        let calendars = eventStore.calendars(for: .event).filter(isVisible)
+        let edinID = edinCalendarID
+        let calendars = eventStore.calendars(for: .event).filter { calendar in
+            calendar.calendarIdentifier != edinID && isVisible(calendar)
+        }
         guard !calendars.isEmpty else { return [] }
 
         let predicate = eventStore.predicateForEvents(withStart: start, end: end, calendars: calendars)

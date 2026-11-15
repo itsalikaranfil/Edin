@@ -97,7 +97,7 @@ struct SettingsView: View {
 
                                 Spacer()
 
-                                Text(appleCalendar.isActive ? "On" : "Off")
+                                Text(appleCalendar.isActive || appleCalendar.isExportActive ? "On" : "Off")
                                     .font(.subheadline)
                                     .foregroundColor(.gray)
 

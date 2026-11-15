@@ -16,7 +16,7 @@
 	<key>NSAlarmKitUsageDescription</key>
 	<string>Edin schedules alarms that can wake you and break through Silent Mode and Focus.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>Edin shows events from your Apple calendars alongside your to-dos in the Calendar and Upcoming lists.</string>
+	<string>Edin shows events from your Apple calendars alongside your to-dos, and can add your Edin events and reminders to Apple Calendar.</string>
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>One sends reminders for your events and tasks.</string>
 	<key>UILaunchScreen</key>

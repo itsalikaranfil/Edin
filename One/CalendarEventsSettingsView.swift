@@ -14,6 +14,16 @@ struct CalendarEventsSettingsView: View {
 
     private var checkmarkColor: Color { AccentChoice.color(for: checkmarkRaw) }
 
+    private var exportEvents: Binding<Bool> {
+        Binding(
+            get: { store.isExportActive },
+            set: { newValue in
+                Haptics.light()
+                Task { await store.setExportEnabled(newValue) }
+            }
+        )
+    }
+
     private var showEvents: Binding<Bool> {
         Binding(
             get: { store.isActive },
@@ -30,6 +40,10 @@ struct CalendarEventsSettingsView: View {
                 introCard
 
                 toggleCard
+
+                section(String(localized: "Edin in Apple Calendar")) {
+                    exportCard
+                }
 
                 if store.isDenied {
                     deniedCard
@@ -53,6 +67,7 @@ struct CalendarEventsSettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .hidesTabBar()
         .animation(.snappy(duration: 0.25), value: store.isActive)
+        .animation(.snappy(duration: 0.25), value: store.isExportActive)
         .animation(.snappy(duration: 0.25), value: store.hiddenCalendarIDs)
         .onAppear { store.refresh() }
         .onChange(of: scenePhase) { _, phase in
@@ -85,6 +100,25 @@ struct CalendarEventsSettingsView: View {
                 .foregroundColor(Color.primaryText)
         }
         .tint(.green)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .appearanceCard()
+    }
+
+    private var exportCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Toggle(isOn: exportEvents) {
+                Text("Add Edin Items to Calendar")
+                    .font(.body)
+                    .foregroundColor(Color.primaryText)
+            }
+            .tint(.green)
+
+            Text("Your events and reminders appear in an \"Edin\" calendar in the Apple Calendar app and stay up to date as you change them in Edin.")
+                .font(.footnote)
+                .foregroundColor(.gray)
+                .fixedSize(horizontal: false, vertical: true)
+        }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .appearanceCard()
