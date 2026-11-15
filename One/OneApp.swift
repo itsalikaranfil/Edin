@@ -50,6 +50,7 @@ struct OneApp: App {
                         .interactiveDismissDisabled()
                     }
                     .preferredColorScheme(appAppearance.preferredColorScheme)
+                    .modifier(AppTextSizeModifier())
             }
         }
     }

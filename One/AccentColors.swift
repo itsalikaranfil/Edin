@@ -82,3 +82,41 @@ enum AccentSetting: String, CaseIterable, Identifiable {
 
     var defaultChoice: AccentChoice { .red }
 }
+
+/// App-wide text size from the Appearance page. Automatic follows the system Dynamic Type setting.
+enum AppTextSize {
+    static let modeKey = "textSizeMode"
+    static let customIndexKey = "textSizeCustomIndex"
+
+    enum Mode: String {
+        case automatic
+        case custom
+    }
+
+    /// Slider steps, smallest to largest; `.large` is the system default.
+    static let steps: [DynamicTypeSize] = [
+        .xSmall, .small, .medium, .large, .xLarge, .xxLarge, .xxxLarge,
+        .accessibility1, .accessibility2, .accessibility3
+    ]
+
+    static var defaultIndex: Int {
+        steps.firstIndex(of: .large) ?? 3
+    }
+
+    static func size(forIndex index: Int) -> DynamicTypeSize {
+        steps[min(max(index, 0), steps.count - 1)]
+    }
+}
+
+/// Applies the custom text size from the Appearance page, or leaves the system size alone.
+struct AppTextSizeModifier: ViewModifier {
+    @AppStorage(AppTextSize.modeKey) private var modeRaw = AppTextSize.Mode.automatic.rawValue
+    @AppStorage(AppTextSize.customIndexKey) private var customIndex = AppTextSize.defaultIndex
+    @Environment(\.dynamicTypeSize) private var systemSize
+
+    // Always applied (system size when automatic) so switching modes keeps the view tree intact.
+    func body(content: Content) -> some View {
+        let isCustom = AppTextSize.Mode(rawValue: modeRaw) == .custom
+        content.dynamicTypeSize(isCustom ? AppTextSize.size(forIndex: customIndex) : systemSize)
+    }
+}
