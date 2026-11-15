@@ -65,8 +65,11 @@ struct CalendarDaySheet<Header: View, Content: View>: View {
                             .padding(.bottom, 12)
                             .frame(maxWidth: .infinity)
 
+                        // Geometry group: the glass pills move as one with the header instead of
+                        // animating their own position when the sheet resizes after a drag.
                         header()
                             .environment(\.glassPillsInteractive, false)
+                            .geometryGroup()
                     }
                     .contentShape(Rectangle())
                     // Simultaneous so the filter pills in the header stay tappable.
