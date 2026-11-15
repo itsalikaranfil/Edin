@@ -990,7 +990,7 @@ private struct CalendarGridTopKey: PreferenceKey {
 
 struct DayCellView: View {
     /// Day circle plus item dot; week mode sizes the sheet from this.
-    static let rowHeight: CGFloat = 45
+    static let rowHeight: CGFloat = 47
 
     let date: Date
     let isToday: Bool
@@ -1013,7 +1013,7 @@ struct DayCellView: View {
     }
     
     var body: some View {
-        VStack(spacing: 2) {
+        VStack(spacing: 4) {
             Text("\(calendar.component(.day, from: date))")
                 .font(.system(size: 18, weight: shouldHighlight ? .bold : .regular))
                 .foregroundColor(
