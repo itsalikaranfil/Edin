@@ -120,9 +120,15 @@ struct AppearanceSettingsView: View {
         VStack(spacing: 0) {
             AccentRow(setting: .tabHighlight, icon: "dock.rectangle", selection: $tabHighlightRaw)
             cardDivider
-            AccentRow(setting: .checkmark, icon: "checkmark", selection: $checkmarkRaw)
+            AccentRow(setting: .checkmark, icon: "checkmark", isCircle: true, selection: $checkmarkRaw)
             cardDivider
-            AccentRow(setting: .todayCircle, icon: "calendar", selection: $todayCircleRaw)
+            AccentRow(
+                setting: .todayCircle,
+                icon: "calendar",
+                iconText: "\(Calendar.current.component(.day, from: Date()))",
+                isCircle: true,
+                selection: $todayCircleRaw
+            )
         }
         .appearanceCard()
     }
@@ -153,16 +159,30 @@ private extension View {
 private struct IconChip: View {
     let systemName: String
     let color: Color
+    /// Shown instead of the symbol when set (e.g. today's day number).
+    var text: String? = nil
+    var isCircle = false
 
     var body: some View {
-        Image(systemName: systemName)
-            .font(.system(size: 15, weight: .semibold))
-            .foregroundColor(.white)
-            .frame(width: 32, height: 32)
-            .background(
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(color.gradient)
-            )
+        Group {
+            if let text {
+                Text(text)
+                    .font(.system(size: 14, weight: .bold))
+                    .monospacedDigit()
+            } else {
+                Image(systemName: systemName)
+                    .font(.system(size: 15, weight: .semibold))
+            }
+        }
+        .foregroundColor(.white)
+        .frame(width: 32, height: 32)
+        .background {
+            if isCircle {
+                Circle().fill(color.gradient)
+            } else {
+                RoundedRectangle(cornerRadius: 9, style: .continuous).fill(color.gradient)
+            }
+        }
     }
 }
 
@@ -467,6 +487,8 @@ private struct TextSizeSlider: View {
 private struct AccentRow: View {
     let setting: AccentSetting
     let icon: String
+    var iconText: String? = nil
+    var isCircle = false
     @Binding var selection: String
 
     private var selectedChoice: AccentChoice {
@@ -476,7 +498,7 @@ private struct AccentRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 12) {
-                IconChip(systemName: icon, color: selectedChoice.color)
+                IconChip(systemName: icon, color: selectedChoice.color, text: iconText, isCircle: isCircle)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(setting.title)
                         .font(.body)
