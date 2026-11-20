@@ -18,7 +18,11 @@ struct AppleCalendarEvent: Identifiable, Hashable {
     let endDate: Date
     let isAllDay: Bool
     let calendarTitle: String
+    let calendarIdentifier: String
     let color: Color
+    /// False for holidays, birthdays, and subscribed calendars, which can't be changed.
+    let isEditable: Bool
+    let isRecurring: Bool
 
     func occurs(on day: Date, calendar: Calendar = .current) -> Bool {
         let dayStart = calendar.startOfDay(for: day)
@@ -200,7 +204,10 @@ final class AppleCalendarStore: ObservableObject {
                     endDate: event.endDate,
                     isAllDay: event.isAllDay,
                     calendarTitle: calendar?.title ?? "",
-                    color: calendar.map { Color(cgColor: $0.cgColor) } ?? Color.eventBlue
+                    calendarIdentifier: calendar?.calendarIdentifier ?? "",
+                    color: calendar.map { Color(cgColor: $0.cgColor) } ?? Color.eventBlue,
+                    isEditable: calendar.map(Self.allowsEditing) ?? false,
+                    isRecurring: event.hasRecurrenceRules
                 )
             }
             .sorted { $0.startDate < $1.startDate }
@@ -208,6 +215,44 @@ final class AppleCalendarStore: ObservableObject {
 
     func event(withIdentifier identifier: String) -> EKEvent? {
         eventStore.event(withIdentifier: identifier)
+    }
+
+    /// The specific occurrence shown in a row (`event(withIdentifier:)` returns a repeat's first one).
+    func ekEvent(for event: AppleCalendarEvent) -> EKEvent? {
+        if let calendar = eventStore.calendar(withIdentifier: event.calendarIdentifier) {
+            let predicate = eventStore.predicateForEvents(
+                withStart: event.startDate.addingTimeInterval(-1),
+                end: event.endDate.addingTimeInterval(1),
+                calendars: [calendar]
+            )
+            if let match = eventStore.events(matching: predicate).first(where: {
+                $0.eventIdentifier == event.eventIdentifier && $0.startDate == event.startDate
+            }) {
+                return match
+            }
+        }
+        return eventStore.event(withIdentifier: event.eventIdentifier)
+    }
+
+    /// Deletes one occurrence, or the whole series when `allOccurrences` is true.
+    func delete(_ event: EKEvent, allOccurrences: Bool) {
+        if allOccurrences, event.hasRecurrenceRules,
+           let identifier = event.eventIdentifier,
+           let first = eventStore.event(withIdentifier: identifier) {
+            try? eventStore.remove(first, span: .futureEvents, commit: true)
+        } else {
+            try? eventStore.remove(event, span: .thisEvent, commit: true)
+        }
+        refresh()
+    }
+
+    func save(_ event: EKEvent) {
+        try? eventStore.save(event, span: .thisEvent, commit: true)
+        refresh()
+    }
+
+    static func allowsEditing(_ calendar: EKCalendar) -> Bool {
+        calendar.allowsContentModifications && calendar.type != .birthday && calendar.type != .subscription
     }
 
     private func groupTitle(for calendar: EKCalendar) -> String {

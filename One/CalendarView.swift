@@ -660,7 +660,7 @@ struct CalendarView: View {
                         .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                         .listRowSeparator(index < totalCount - 1 ? .visible : .hidden, edges: .bottom)
                         .listRowSeparatorTint(Color.gray.opacity(0.25))
-                        .listRowBackground(Color.sheetSurface)
+                        .listRowBackground(Color.clear)
                 }
                 ForEach(Array(displayItems.enumerated()), id: \.element.id) { index, item in
                     Group {

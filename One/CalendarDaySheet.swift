@@ -224,7 +224,7 @@ extension View {
     func calendarSheetBackground() -> some View {
         let shape = UnevenRoundedRectangle(topLeadingRadius: 24, topTrailingRadius: 24, style: .continuous)
         return clipShape(shape)
-            .background(Color.calendarSheetSurface, in: shape)
+            .background(Color.calendarDaySheetSurface, in: shape)
             .overlay {
                 shape
                     .stroke(

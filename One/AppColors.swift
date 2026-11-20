@@ -31,7 +31,13 @@ extension Color {
         dark: UIColor(red: 20 / 255, green: 20 / 255, blue: 20 / 255, alpha: 1)
     )
 
-    /// Calendar tab sheets, the calendar Folders/Alarms bars, and Upcoming item sections.
+    /// The calendar tab's day, folders, and alarms sheets.
+    static let calendarDaySheetSurface = dynamic(
+        light: .white,
+        dark: UIColor(red: 20 / 255, green: 20 / 255, blue: 20 / 255, alpha: 1)
+    )
+
+    /// The calendar Folders/Alarms bars and Upcoming item sections.
     static let calendarSheetSurface = dynamic(
         light: .white,
         dark: UIColor(red: 0x1C / 255, green: 0x1C / 255, blue: 0x1E / 255, alpha: 1)
@@ -42,6 +48,9 @@ extension Color {
         light: UIColor(white: 0, alpha: 0.08),
         dark: UIColor(white: 1, alpha: 0.06)
     )
+
+    /// Calendar icon for events imported from Apple Calendar.
+    static let importedEventBlue = Color(red: 89 / 255, green: 168 / 255, blue: 216 / 255)
 
     /// Filter pill background.
     static let pillBackground = dynamic(

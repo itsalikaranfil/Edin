@@ -57,7 +57,7 @@ struct FolderItemsView: View {
                         .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                         .listRowSeparator(index < filteredItems.count - 1 ? .visible : .hidden, edges: .bottom)
                         .listRowSeparatorTint(Color.gray.opacity(0.25))
-                        .listRowBackground(Color.calendarSheetSurface)
+                        .listRowBackground(Color.clear)
                     }
                 }
             }
