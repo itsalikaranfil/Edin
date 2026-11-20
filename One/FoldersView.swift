@@ -51,7 +51,7 @@ struct FoldersView: View {
                     .id(folder.name ?? "")
                     .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                     .listRowSeparator(.hidden)
-                    .listRowBackground(Color.sheetSurface)
+                    .listRowBackground(Color.clear)
                     .contextMenu {
                         if !FolderStore.isInbox(folder) {
                             Button {
@@ -74,13 +74,12 @@ struct FoldersView: View {
                                 folderNameSheetMode = .rename(folder)
                             } label: {
                                 Label("Edit", systemImage: "pencil")
+                                    .labelStyle(.titleAndIcon)
                             }
                             .tint(.blue)
 
-                            Button(role: .destructive) {
+                            SwipeDeleteButton {
                                 deleteFolder(folder)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
                             }
                         }
                     }

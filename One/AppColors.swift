@@ -31,6 +31,27 @@ extension Color {
         dark: UIColor(red: 20 / 255, green: 20 / 255, blue: 20 / 255, alpha: 1)
     )
 
+    /// The calendar tab's day, folders, and alarms sheets.
+    static let calendarDaySheetSurface = dynamic(
+        light: .white,
+        dark: UIColor(red: 20 / 255, green: 20 / 255, blue: 20 / 255, alpha: 1)
+    )
+
+    /// The calendar Folders/Alarms bars and Upcoming item sections.
+    static let calendarSheetSurface = dynamic(
+        light: .white,
+        dark: UIColor(red: 0x1C / 255, green: 0x1C / 255, blue: 0x1E / 255, alpha: 1)
+    )
+
+    /// Hairline top edge highlight on the calendar tab sheets.
+    static let calendarSheetEdge = dynamic(
+        light: UIColor(white: 0, alpha: 0.08),
+        dark: UIColor(white: 1, alpha: 0.06)
+    )
+
+    /// Calendar icon for events imported from Apple Calendar.
+    static let importedEventBlue = Color(red: 89 / 255, green: 168 / 255, blue: 216 / 255)
+
     /// Filter pill background.
     static let pillBackground = dynamic(
         light: UIColor(red: 228 / 255, green: 228 / 255, blue: 230 / 255, alpha: 1),
@@ -66,4 +87,7 @@ extension Color {
 
     /// Deeper red for soft glows only.
     static let premiumRedDeep = Color(red: 0.62, green: 0.03, blue: 0.09)
+
+    /// Edin+ paywall and Settings premium card surface (always dark).
+    static let paywallBackground = Color(red: 0.075, green: 0.075, blue: 0.08)
 }

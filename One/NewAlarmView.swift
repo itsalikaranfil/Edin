@@ -181,6 +181,7 @@ struct NewAlarmView: View {
 /// Apple Clock–style weekday multi-select for alarm repeat.
 private struct AlarmWeekdayPickerView: View {
     @Binding var selectedWeekdays: Set<Int>
+    @AppStorage(AccentSetting.checkmark.rawValue) private var checkmarkRaw = AccentSetting.checkmark.defaultChoice.rawValue
 
     private var orderedDays: [Int] {
         AlarmWeekdays.orderedWeekdays()
@@ -206,7 +207,7 @@ private struct AlarmWeekdayPickerView: View {
                         if selectedWeekdays.contains(weekday) {
                             Image(systemName: "checkmark")
                                 .fontWeight(.semibold)
-                                .foregroundColor(.red)
+                                .foregroundColor(AccentChoice.color(for: checkmarkRaw))
                         }
                     }
                     .contentShape(Rectangle())

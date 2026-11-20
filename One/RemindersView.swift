@@ -72,6 +72,8 @@ struct RemindersView: View {
     @State private var selectedHabit: Habit? = nil
     @State private var selectedHabitOccurrenceDay: Date? = nil
     @State private var showCompletedSheet = false
+    @ObservedObject private var appleCalendar = AppleCalendarStore.shared
+    @State private var appleEvents: [AppleCalendarEvent] = []
     
     private var completedEvents: [Event] {
         let today = Calendar.current.startOfDay(for: Date())
@@ -104,6 +106,22 @@ struct RemindersView: View {
     }
     
     private typealias UpcomingItem = (id: String, occurrenceDay: Date, isEvent: Bool, event: Event?, reminder: Reminder?, habit: Habit?)
+
+    /// A row in a day section: Apple Calendar events sit above Edin items, like Things.
+    private enum UpcomingRow: Identifiable {
+        case apple(AppleCalendarEvent)
+        case item(UpcomingItem)
+
+        var id: String {
+            switch self {
+            case .apple(let event): return "apple-\(event.id)"
+            case .item(let item): return item.id
+            }
+        }
+    }
+
+    /// Apple Calendar events are listed for today and the following days up to this count.
+    private static let appleEventsHorizonDays = 7
     
     /// Today through today+2 — horizon used for repeating events/reminders in Upcoming.
     private var upcomingRepeatHorizonEnd: Date {
@@ -281,14 +299,56 @@ struct RemindersView: View {
     }
     
     private var hasVisibleUpcomingItems: Bool {
-        !visibleTodayItems.isEmpty || !visibleScheduledItemsByDate.isEmpty
+        !todayRows.isEmpty || !scheduledSections.isEmpty
+    }
+
+    private func appleDayEvents(on day: Date) -> [AppleCalendarEvent] {
+        appleEvents
+            .filter { $0.occurs(on: day) }
+            .sorted { $0.sortDate(on: day) < $1.sortDate(on: day) }
+    }
+
+    private func reloadAppleEvents() {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        guard let end = calendar.date(byAdding: .day, value: Self.appleEventsHorizonDays, to: today) else { return }
+        appleEvents = appleCalendar.events(from: today, to: end)
+    }
+
+    private var todayRows: [UpcomingRow] {
+        let appleRows: [UpcomingRow] = appleDayEvents(on: Date()).map { UpcomingRow.apple($0) }
+        let itemRows: [UpcomingRow] = visibleTodayItems.map { UpcomingRow.item($0) }
+        return appleRows + itemRows
+    }
+
+    private var scheduledSections: [(date: Date, rows: [UpcomingRow])] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        var itemsByDay: [Date: [UpcomingItem]] = [:]
+        for group in visibleScheduledItemsByDate {
+            itemsByDay[group.date] = group.items
+        }
+
+        var days = Set(itemsByDay.keys)
+        for offset in 1..<Self.appleEventsHorizonDays {
+            if let day = calendar.date(byAdding: .day, value: offset, to: today),
+               !appleDayEvents(on: day).isEmpty {
+                days.insert(day)
+            }
+        }
+
+        return days.sorted().map { day in
+            let appleRows: [UpcomingRow] = appleDayEvents(on: day).map { UpcomingRow.apple($0) }
+            let itemRows: [UpcomingRow] = (itemsByDay[day] ?? []).map { UpcomingRow.item($0) }
+            return (date: day, rows: appleRows + itemRows)
+        }
     }
 
     /// Identity for List remount when section layout changes (avoids UICollectionView crash).
     private var upcomingListStructureID: String {
-        let hasToday = visibleTodayItems.isEmpty ? "0" : "1"
+        let hasToday = todayRows.isEmpty ? "0" : "1"
         let empty = hasVisibleUpcomingItems ? "1" : "0"
-        let scheduledKeys = visibleScheduledItemsByDate
+        let scheduledKeys = scheduledSections
             .map { String(Int($0.date.timeIntervalSince1970)) }
             .joined(separator: ",")
         return "\(empty)-\(hasToday)-\(scheduledKeys)"
@@ -397,7 +457,7 @@ struct RemindersView: View {
     private func upcomingSectionBackground(isFirst: Bool, isLast: Bool) -> some View {
         if isFirst && isLast {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color.appBackground)
+                .fill(Color.calendarSheetSurface)
         } else if isFirst {
             UnevenRoundedRectangle(
                 topLeadingRadius: 10,
@@ -405,7 +465,7 @@ struct RemindersView: View {
                 bottomTrailingRadius: 0,
                 topTrailingRadius: 10
             )
-            .fill(Color.appBackground)
+            .fill(Color.calendarSheetSurface)
         } else if isLast {
             UnevenRoundedRectangle(
                 topLeadingRadius: 0,
@@ -413,9 +473,23 @@ struct RemindersView: View {
                 bottomTrailingRadius: 10,
                 topTrailingRadius: 0
             )
-            .fill(Color.appBackground)
+            .fill(Color.calendarSheetSurface)
         } else {
-            Color.appBackground
+            Color.calendarSheetSurface
+        }
+    }
+
+    @ViewBuilder
+    private func upcomingRow(_ row: UpcomingRow, isFirst: Bool, isLast: Bool) -> some View {
+        switch row {
+        case .apple(let event):
+            AppleCalendarEventRow(event: event, groupedStyle: true)
+                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                .listRowSeparator(isLast ? .hidden : .visible, edges: .bottom)
+                .listRowSeparatorTint(Color.gray.opacity(0.25))
+                .listRowBackground(upcomingSectionBackground(isFirst: isFirst, isLast: isLast))
+        case .item(let item):
+            upcomingItemRow(item, isFirst: isFirst, isLast: isLast)
         }
     }
 
@@ -481,7 +555,7 @@ struct RemindersView: View {
     private var upcomingEmptyContent: some View {
         EmptyListSkeletonView(
             accessibilityLabel: String(localized: "No events/reminders"),
-            surface: Color.appBackground,
+            surface: Color.calendarSheetSurface,
             icons: ["calendar", "circle", "calendar", "circle"]
         )
         .listRowInsets(EdgeInsets())
@@ -511,7 +585,7 @@ struct RemindersView: View {
 
                 Section {
                     EmptyListSkeletonView(
-                        surface: Color.appBackground,
+                        surface: Color.calendarSheetSurface,
                         icons: ["calendar", "circle"]
                     )
                     .listRowInsets(EdgeInsets())
@@ -525,13 +599,14 @@ struct RemindersView: View {
                         .textCase(nil)
                 }
             } else {
-                if !visibleTodayItems.isEmpty {
+                let todaySectionRows = todayRows
+                if !todaySectionRows.isEmpty {
                     Section {
-                        ForEach(Array(visibleTodayItems.enumerated()), id: \.element.id) { index, item in
-                            upcomingItemRow(
-                                item,
+                        ForEach(Array(todaySectionRows.enumerated()), id: \.element.id) { index, row in
+                            upcomingRow(
+                                row,
                                 isFirst: index == 0,
-                                isLast: index == visibleTodayItems.count - 1
+                                isLast: index == todaySectionRows.count - 1
                             )
                         }
                     } header: {
@@ -543,7 +618,8 @@ struct RemindersView: View {
                     }
                 }
 
-                if !visibleScheduledItemsByDate.isEmpty {
+                let scheduledDaySections = scheduledSections
+                if !scheduledDaySections.isEmpty {
                     Section {
                         Text("Scheduled")
                             .font(.title3)
@@ -554,13 +630,13 @@ struct RemindersView: View {
                             .listRowBackground(Color.screenBackground)
                     }
 
-                    ForEach(visibleScheduledItemsByDate, id: \.date) { dateGroup in
+                    ForEach(scheduledDaySections, id: \.date) { dateGroup in
                         Section {
-                            ForEach(Array(dateGroup.items.enumerated()), id: \.element.id) { index, item in
-                                upcomingItemRow(
-                                    item,
+                            ForEach(Array(dateGroup.rows.enumerated()), id: \.element.id) { index, row in
+                                upcomingRow(
+                                    row,
                                     isFirst: index == 0,
-                                    isLast: index == dateGroup.items.count - 1
+                                    isLast: index == dateGroup.rows.count - 1
                                 )
                             }
                         } header: {
@@ -583,7 +659,7 @@ struct RemindersView: View {
         .background(Color.screenBackground)
         // Allow default item removal animation; keep section-date changes non-animated
         // to avoid UICollectionView "invalid number of items" crashes.
-        .animation(nil, value: visibleScheduledItemsByDate.map(\.date))
+        .animation(nil, value: scheduledSections.map(\.date))
         .sheet(isPresented: $showCompletedSheet) {
             CompletedListPage(onClose: { showCompletedSheet = false })
                 .environment(\.managedObjectContext, viewContext)
@@ -613,7 +689,16 @@ struct RemindersView: View {
                 completingHabitOccurrenceIds.removeAll()
             }
         }
-        .onAppear { updateEventPredicate() }
+        .onAppear {
+            updateEventPredicate()
+            reloadAppleEvents()
+        }
+        .onReceive(appleCalendar.$revision) { _ in
+            reloadAppleEvents()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+            reloadAppleEvents()
+        }
     }
     
     /// Drops completing IDs once the reminder is no longer active (fully completed).
@@ -923,19 +1008,13 @@ struct HabitRow: View {
         .buttonStyle(.plain)
         .swipeActions(edge: .trailing, allowsFullSwipe: !ItemActions.isRepeating(repeatOption: habit.repeatOption)) {
             if ItemActions.isRepeating(repeatOption: habit.repeatOption) {
-                Button {
+                SwipeDeleteButton(isDestructive: false) {
                     showRepeatDeleteConfirmation = true
-                } label: {
-                    Label("Delete", systemImage: "trash")
                 }
-                .tint(Color(uiColor: .systemRed))
             } else {
-                Button(role: .destructive) {
+                SwipeDeleteButton {
                     ItemActions.delete(habit, context: viewContext)
-                } label: {
-                    Label("Delete", systemImage: "trash")
                 }
-                .tint(Color(uiColor: .systemRed))
             }
         }
         .contextMenu {
@@ -1129,17 +1208,12 @@ struct ReminderRow: View {
         .buttonStyle(PlainButtonStyle())
         .swipeActions(edge: .trailing, allowsFullSwipe: !ItemActions.isRepeating(repeatOption: reminder.repeatOption)) {
             if ItemActions.isRepeating(repeatOption: reminder.repeatOption) {
-                Button {
+                SwipeDeleteButton(isDestructive: false) {
                     performSwipeDelete()
-                } label: {
-                    Label("Delete", systemImage: "trash")
                 }
-                .tint(Color(uiColor: .systemRed))
             } else {
-                Button(role: .destructive) {
+                SwipeDeleteButton {
                     performSwipeDelete()
-                } label: {
-                    Label("Delete", systemImage: "trash")
                 }
             }
         }
@@ -1394,17 +1468,12 @@ struct EventRow: View {
         .buttonStyle(PlainButtonStyle())
         .swipeActions(edge: .trailing, allowsFullSwipe: !ItemActions.isRepeating(repeatOption: event.repeatOption)) {
             if ItemActions.isRepeating(repeatOption: event.repeatOption) {
-                Button {
+                SwipeDeleteButton(isDestructive: false) {
                     performSwipeDelete()
-                } label: {
-                    Label("Delete", systemImage: "trash")
                 }
-                .tint(Color(uiColor: .systemRed))
             } else {
-                Button(role: .destructive) {
+                SwipeDeleteButton {
                     performSwipeDelete()
-                } label: {
-                    Label("Delete", systemImage: "trash")
                 }
             }
         }

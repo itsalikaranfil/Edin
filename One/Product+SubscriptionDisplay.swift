@@ -52,6 +52,49 @@ extension Product {
         }
     }
 
+    /// Headline price for plan rows: annual as its monthly equivalent, others per their own period.
+    var onePlanPriceLabel: String {
+        guard let period = subscription?.subscriptionPeriod else { return displayPrice }
+        switch (period.unit, period.value) {
+        case (.year, 1):
+            let perMonth = (price / 12).formatted(priceFormatStyle)
+            return String(localized: "\(perMonth)/mo")
+        case (.month, 1):
+            return String(localized: "\(displayPrice)/mo")
+        case (.week, 1), (.day, 7):
+            return String(localized: "\(displayPrice)/wk")
+        default:
+            return "\(displayPrice)/\(oneShortPeriodLabel)"
+        }
+    }
+
+    /// The amount actually billed, shown under the selected plan.
+    var onePlanBillingDetail: String {
+        guard let period = subscription?.subscriptionPeriod else { return onePeriodDescription }
+        switch (period.unit, period.value) {
+        case (.year, 1):
+            return String(localized: "Billed yearly at \(displayPrice)")
+        case (.month, 1):
+            return String(localized: "Billed monthly at \(displayPrice)")
+        case (.week, 1), (.day, 7):
+            return String(localized: "Billed weekly at \(displayPrice)")
+        default:
+            return onePeriodDescription
+        }
+    }
+
+    /// How many months of `monthly` the annual price equals, for "12 months for the price of N".
+    func oneAnnualPriceInMonths(comparedTo monthly: Product) -> Int? {
+        guard id == ProductID.annual.rawValue,
+              monthly.id == ProductID.monthly.rawValue,
+              monthly.price > 0 else {
+            return nil
+        }
+        let months = NSDecimalNumber(decimal: price / monthly.price).doubleValue.rounded()
+        guard months >= 1, months < 12 else { return nil }
+        return Int(months)
+    }
+
     /// Short period unit for compact labels ("week" / "month" / "year").
     var oneShortPeriodLabel: String {
         if let period = subscription?.subscriptionPeriod {
@@ -98,7 +141,8 @@ extension Product {
         guard yearlyIfMonthly > 0, yearlyIfMonthly > price else { return nil }
         let saved = yearlyIfMonthly - price
         let percent = (saved / yearlyIfMonthly) * Decimal(100)
-        let rounded = NSDecimalNumber(decimal: percent).intValue
+        // NSDecimalNumber.intValue returns garbage for long repeating decimals (e.g. 16.666…).
+        let rounded = Int(NSDecimalNumber(decimal: percent).doubleValue.rounded(.down))
         return rounded > 0 ? rounded : nil
     }
 

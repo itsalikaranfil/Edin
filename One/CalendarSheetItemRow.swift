@@ -467,19 +467,13 @@ private struct CalendarSheetItemRowLayout<Leading: View, Trailing: View>: View {
         .swipeActions(edge: .trailing, allowsFullSwipe: !isRepeating) {
             // Destructive role eagerly removes the row; repeating deletes need a confirmation first.
             if isRepeating {
-                Button {
+                SwipeDeleteButton(isDestructive: false) {
                     onDelete()
-                } label: {
-                    Label("Delete", systemImage: "trash")
                 }
-                .tint(Color(uiColor: .systemRed))
             } else {
-                Button(role: .destructive) {
+                SwipeDeleteButton {
                     onDelete()
-                } label: {
-                    Label("Delete", systemImage: "trash")
                 }
-                .tint(Color(uiColor: .systemRed))
             }
         }
         .contextMenu {
@@ -660,14 +654,20 @@ struct ToolbarGlassCancelButton: View {
     }
 }
 
-/// Nav-toolbar save/done — system glassProminent + red tint, light red checkmark.
+/// Nav-toolbar save/done — system glassProminent tinted with the checkmark accent, light checkmark.
 struct ToolbarGlassConfirmButton: View {
     var accessibilityLabelText: String = "Save"
     var isEnabled: Bool = true
     var action: () -> Void
 
-    private var checkmarkLightRed: Color {
-        Color(red: 1.0, green: 0.72, blue: 0.72)
+    @AppStorage(AccentSetting.checkmark.rawValue) private var checkmarkRaw = AccentSetting.checkmark.defaultChoice.rawValue
+
+    private var accent: Color {
+        AccentChoice.color(for: checkmarkRaw)
+    }
+
+    private var checkmarkLight: Color {
+        accent.mix(with: .white, by: 0.7)
     }
 
     var body: some View {
@@ -676,10 +676,10 @@ struct ToolbarGlassConfirmButton: View {
             action()
         } label: {
             Image(systemName: "checkmark")
-                .foregroundStyle(checkmarkLightRed)
+                .foregroundStyle(checkmarkLight)
         }
         .buttonStyle(.glassProminent)
-        .tint(Color.flagRed)
+        .tint(accent)
         .disabled(!isEnabled)
         .opacity(isEnabled ? 1 : 0.4)
         .accessibilityLabel(accessibilityLabelText)
@@ -744,7 +744,7 @@ struct CalendarSheetFilterBar: View {
                 .foregroundColor(Color.primaryText)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .glassCapsulePill(active: isFilterActive)
+                .sheetFilterPill(active: isFilterActive)
                 .contentShape(Capsule())
             }
             .menuStyle(.button)
@@ -765,7 +765,7 @@ struct CalendarSheetFilterBar: View {
                 .foregroundColor(Color.primaryText)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .glassCapsulePill(active: showFlaggedOnly)
+                .sheetFilterPill(active: showFlaggedOnly)
                 .contentShape(Capsule())
             }
             .buttonStyle(.plain)
@@ -788,7 +788,7 @@ struct CalendarSheetFilterBar: View {
                     .foregroundColor(Color.primaryText)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
-                    .glassCapsulePill()
+                    .sheetFilterPill()
                     .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
@@ -796,5 +796,35 @@ struct CalendarSheetFilterBar: View {
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 8)
+    }
+}
+
+private extension View {
+    /// Liquid glass on the flat white light-mode sheet reads as a dark drop shadow,
+    /// so light mode uses a flat white pill with a hairline border instead.
+    func sheetFilterPill(active: Bool = false) -> some View {
+        modifier(SheetFilterPillModifier(active: active))
+    }
+}
+
+private struct SheetFilterPillModifier: ViewModifier {
+    let active: Bool
+    @Environment(\.colorScheme) private var colorScheme
+
+    func body(content: Content) -> some View {
+        if colorScheme == .dark {
+            content.glassCapsulePill(active: active)
+        } else {
+            content.background {
+                Capsule()
+                    .fill(Color.white)
+                    .overlay {
+                        Capsule().strokeBorder(
+                            Color.primaryText.opacity(active ? 0.35 : 0.1),
+                            lineWidth: active ? 1.2 : 1
+                        )
+                    }
+            }
+        }
     }
 }
